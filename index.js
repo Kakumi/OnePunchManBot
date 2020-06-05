@@ -4,8 +4,11 @@ const fs = require('fs');
 const client = new Discord.Client();
 const prefix = '!';
 
-//Paramètres wakfu
+//Paramètres
 const levels = ['3', '21', '36', '51', '66', '81', '96', '111', '121', '141', '156', '171', '186', '200', '201'];
+const pingLevels = ['3', '21', '36', '51', '66', '81', '96', '111', '121', '141', '156', '171', '186', '200', '201'];
+const token = "NzE4MDQ2ODQwMzUxNzUyMjIy.XtomRw.qxEcogAww-21mYU3CL2BWBbGxDw";
+const channelSortie = "718495899306688552";
 
 
 client.on('ready', () => {
@@ -154,8 +157,8 @@ client.on('message', msg => {
             embed.addField("Demandeur :", sender.username, true);
             embed.setTimestamp(currentDate);
             embed.setAuthor(sender.username, sender.displayAvatarURL());
-    
-            msg.channel.send('@Annonce Voici la sortie prévue :', embed).then(message => {
+
+            msg.guild.channels.cache.get(channelSortie).send('@Annonce Voici la sortie prévue :', embed).then(message => {
                 nouvelleSortie.message = message.id;
                 message.react('✅');
 
@@ -165,7 +168,7 @@ client.on('message', msg => {
                     if (!fs.existsSync("sorties/")) {
                         fs.mkdir("sorties", function(err) {
                             if (err) {
-                              console.log(err)
+                                console.log(err)
                             }
                         });
                     }
@@ -181,7 +184,7 @@ client.on('message', msg => {
     }
 });
 
-client.login('NzE4MDQ2ODQwMzUxNzUyMjIy.XtjMSQ.zmqKHDDYMEJM69GgZtgrS3T1kMg');
+client.login(token);
 
 function getFichierSorties(guild) {
     nomServeur = guild.name;
