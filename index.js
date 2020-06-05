@@ -184,7 +184,7 @@ client.on('message', msg => {
     }
 });
 
-client.login(token);
+client.login(token);// .then(function () {const guild=client.guilds.get("ID DU SERVEUR");});
 
 function getFichierSorties(guild) {
     nomServeur = guild.name;
