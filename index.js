@@ -12,10 +12,11 @@ const token = "NzE4MDQ2ODQwMzUxNzUyMjIy.XtomRw.qxEcogAww-21mYU3CL2BWBbGxDw";
 const channelSortieId = "718495899306688552";
 const guildFolder = "OPM";
 const fichierSortie = guildFolder + '/sortie.json';
+const number=["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
 
 cron.schedule('*/10 * * * * *', () => {
     sorties = getSorties(fichierSortie);
-
+    onloop=true;
     for (var i = 0; i < sorties.length; i++) {
         sortie = sorties[i];
         dateMaintenant = new Date();
@@ -36,8 +37,7 @@ cron.schedule('*/10 * * * * *', () => {
 
             //On doit supprimer la sortie
         }
-    }
-});
+    }});
 
 
 client.on('ready', () => {
@@ -214,6 +214,59 @@ client.on('message', msg => {
             });
         });
     }
+
+    else if(msg.content.startsWith(prefix + 'remove')){
+      sorties=getSorties(fichierSortie);
+      user_sorties=[];
+      for(i=0; i<sorties.length; i++){
+        if(sorties[i].demandeur==msg.author.id){
+          user_sorties.push(sorties[i]);
+        };
+
+      }
+      send="";
+      if (user_sorties.length==0){
+        msg.channel.send("T'as pas de sortie!");
+      }
+      else{
+        index=0;
+        user_sorties.forEach(function(sortie){
+          send=send+number[index]+" "+sortie.description+" "+sortie.annee+"/"+sortie.mois+"/"+sortie.jour+" "+sortie.heure+":"+sortie.minutes+"\n";
+          index++;
+            });
+
+
+          };
+          if(send!=""){
+          msg.channel.send(send).then(async function (message){
+            for(i=0; i<index; i++){
+              message.react(number[i]);
+            }
+            const filter = (reaction, user) => {
+               return  user.id === msg.author.id;
+             };
+             await message.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] })
+              .then(collected => {
+                const reaction = collected.first();
+                console.log(reaction.emoji.name)
+             if (number.includes(reaction.emoji.name) ) {
+                left_sortie=user_sorties[number.indexOf(reaction.emoji.name)];
+               msg.reply("Sortie "+left_sortie.description+" annulée!");
+               participants=left_sortie.participants;
+               for(j=0;j<participants.length;j++){
+                 client.users.fetch(participants[j]).then(participant => {
+                     participant.createDM().then(dmchannel => {
+                         dmchannel.send("Ta sortie **" + left_sortie.description + "** est **" + " annulée** !");
+               });});}
+               sorties.splice(sorties.indexOf(left_sortie));
+               setSorties(fichierSortie,sorties);
+               message.delete();
+             }})
+               .catch(collected => {
+  msg.reply('Aurevoir');
+});
+});
+}}
 });
 
 client.login(token);// .then(function () {const guild=client.guilds.get("ID DU SERVEUR");});
@@ -241,7 +294,7 @@ function messageSortieExiste(sorties, id) {
     return false;
 }
 
-function diff_minutes(dt1, dt2) 
+function diff_minutes(dt1, dt2)
 {
     var diff = (dt1.getTime() - dt2.getTime()) / 1000;
     diff /= 60;
