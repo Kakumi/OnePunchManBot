@@ -7,12 +7,13 @@ const prefix = '!';
 
 //Paramètres
 const levels = ['3', '21', '36', '51', '66', '81', '96', '111', '121', '141', '156', '171', '186', '200', '201'];
-const pingLevels = ['3', '21', '36', '51', '66', '81', '96', '111', '121', '141', '156', '171', '186', '200', '201'];
+const pingLevels = ['718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206'];
 const token = "NzE4MDQ2ODQwMzUxNzUyMjIy.XtomRw.qxEcogAww-21mYU3CL2BWBbGxDw";
 const channelSortieId = "718495899306688552";
 const guildFolder = "OPM";
 const fichierSortie = guildFolder + '/sortie.json';
-const number=["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+const number = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+const sortieMax = 5;
 
 cron.schedule('*/10 * * * * *', () => {
     sorties = getSorties(fichierSortie);
@@ -59,7 +60,6 @@ client.on('messageReactionAdd', (messageReaction, user) => {
     sorties = getSorties(fichierSortie);
     indexSortie = messageSortieExiste(sorties, message.id);
     if (indexSortie === false) {
-        console.log("introuvable");
         return false;
     }
 
@@ -87,7 +87,6 @@ client.on('messageReactionRemove', (messageReaction, user) => {
     const message = messageReaction.message;
     sorties = getSorties(fichierSortie);
     if (indexSortie === false) {
-        console.log("introuvable");
         return false;
     }
 
@@ -148,7 +147,7 @@ client.on('message', msg => {
     msg.reply(message);
   }
   else if (msg.content.startsWith(prefix + 'sortie')) {
-        content = msg.content.replace("[", "").replace("]", "");
+        content = msg.content.replace(/\[|\]/gm, "");
         nouvelleSortie = new Object();
         const args = content.slice(prefix.length).split(' ');
         const command = args.shift().toLowerCase();
@@ -158,17 +157,28 @@ client.on('message', msg => {
             return false;
         }
 
+        objetSortieUtilisateur = getSortiesUtilisateur(msg.author.id);
+        if (objetSortieUtilisateur.length >= sortieMax) {
+            msg.channel.send("Vous avez atteint la limite de création de sortie !");
+            return false;
+        }
+
         nouvelleSortie.demandeur = msg.author.id;
         nouvelleSortie.niveau = args[0];
-        date = args[1].split('-');
-        heures = args[2].split(':');
-        currentDate = new Date(date[2], date[1], date[0], heures[0], heures[1]);
+        date = args[1].replace(/\//gm, "-").split('-');
+        heures = args[2].replace(/h/gm, ":").split(':');
+        dateSortie = new Date(date[2], date[1] - 1, date[0], heures[0], heures[1]); //Car index du mois entre 0 et 11
 
-        nouvelleSortie.jour = currentDate.getDate();
-        nouvelleSortie.mois = currentDate.getMonth();
-        nouvelleSortie.annee = currentDate.getFullYear();
-        nouvelleSortie.heure = currentDate.getHours();
-        nouvelleSortie.minutes = currentDate.getMinutes();
+        if (diff_minutes(dateSortie, new Date()) <= 0) {
+            msg.channel.send("La date est invalide !");
+            return false;
+        }
+
+        nouvelleSortie.jour = dateSortie.getDate();
+        nouvelleSortie.mois = dateSortie.getMonth() + 1; //Car index du mois entre 0 et 11
+        nouvelleSortie.annee = dateSortie.getFullYear();
+        nouvelleSortie.heure = dateSortie.getHours();
+        nouvelleSortie.minutes = dateSortie.getMinutes();
         nouvelleSortie.participants = [];
 
         nouvelleSortie.description = "";
@@ -182,91 +192,96 @@ client.on('message', msg => {
             return false;
         }
 
-        client.users.fetch(nouvelleSortie.demandeur).then(sender => {
-            const embed = new Discord.MessageEmbed();
-            embed.setColor(0xff0000);
-            embed.setTitle('Nouvelle sortie de guilde !');
-            embed.setDescription(nouvelleSortie.description + "\nCliquer sur ✅ pour participer !");
-            embed.addField("Niveau requis :", nouvelleSortie.niveau, true);
-            embed.addField("Demandeur :", sender.username, true);
-            embed.addField("Date :", nouvelleSortie.jour + "/" + nouvelleSortie.mois + "/" + nouvelleSortie.annee + " à " + nouvelleSortie.heure + ":" + nouvelleSortie.minutes, false);
-            embed.setAuthor(sender.username, sender.displayAvatarURL());
-
-            msg.guild.channels.cache.get(channelSortieId).send('@Annonce Voici la sortie prévue :', embed).then(message => {
-                nouvelleSortie.message = message.id;
-                message.react('✅');
-
-                try {
-                    if (!fs.existsSync(guildFolder + "/")) {
-                        fs.mkdir(guildFolder, function(err) {
-                            if (err) {
-                                console.log(err)
-                            }
-                        });
+        indexPingLevel = levels.indexOf(nouvelleSortie.niveau);
+        msg.guild.roles.fetch(pingLevels[indexPingLevel]).then(role => {
+            client.users.fetch(nouvelleSortie.demandeur).then(sender => {
+                const embed = new Discord.MessageEmbed();
+                embed.setColor(0xff0000);
+                embed.setTitle('Nouvelle sortie de guilde !');
+                embed.setDescription(nouvelleSortie.description + "\nCliquer sur ✅ pour participer !");
+                embed.addField("Niveau requis :", nouvelleSortie.niveau, true);
+                embed.addField("Demandeur :", sender.username, true);
+                embed.addField("Date :", nouvelleSortie.jour + "/" + nouvelleSortie.mois + "/" + nouvelleSortie.annee + " à " + nouvelleSortie.heure + ":" + nouvelleSortie.minutes, false);
+                embed.setAuthor(sender.username, sender.displayAvatarURL());
+    
+                msg.guild.channels.cache.get(channelSortieId).send("<@&" + role + '> Voici la sortie prévue :', embed).then(message => {
+                    nouvelleSortie.message = message.id;
+                    message.react('✅');
+    
+                    try {
+                        if (!fs.existsSync(guildFolder + "/")) {
+                            fs.mkdir(guildFolder, function(err) {
+                                if (err) {
+                                    console.log(err)
+                                }
+                            });
+                        }
+                        sorties = getSorties(fichierSortie);
+                    } catch(err) {
+                        console.error(err)
                     }
-                    sorties = getSorties(fichierSortie);
-                } catch(err) {
-                    console.error(err)
-                }
-
-                sorties.push(nouvelleSortie);
-                setSorties(fichierSortie, sorties);
+    
+                    sorties.push(nouvelleSortie);
+                    setSorties(fichierSortie, sorties);
+                });
             });
         });
     }
 
     else if(msg.content.startsWith(prefix + 'remove')){
-      sorties=getSorties(fichierSortie);
-      user_sorties=[];
-      for(i=0; i<sorties.length; i++){
-        if(sorties[i].demandeur==msg.author.id){
-          user_sorties.push(sorties[i]);
-        };
+        sorties = getSorties(fichierSortie);
+        sortiesUtilisateur = getSortiesUtilisateur(msg.author.id);
 
-      }
-      send="";
-      if (user_sorties.length==0){
-        msg.channel.send("T'as pas de sortie!");
-      }
-      else{
-        index=0;
-        user_sorties.forEach(function(sortie){
-          send=send+number[index]+" "+sortie.description+" "+sortie.annee+"/"+sortie.mois+"/"+sortie.jour+" "+sortie.heure+":"+sortie.minutes+"\n";
-          index++;
+        send = "";
+
+        if (sortiesUtilisateur.length == 0){
+            msg.channel.send("Vous n'avez créé aucune sortie !");
+        } else {
+            index = 0;
+            sortiesUtilisateur.forEach(function(sortie) {
+                send = send + number[index] + " " + sortie.description + " - " + sortie.jour + "/" + sortie.mois + "/" + sortie.annee + " " + sortie.heure + ":" + sortie.minutes + "\n";
+                index++;
             });
+        }
 
+        if(send != "") {
+            msg.channel.send(send).then(async function (message){
+                for(i=0; i<index; i++) {
+                    message.react(number[i]);
+                }
 
-          };
-          if(send!=""){
-          msg.channel.send(send).then(async function (message){
-            for(i=0; i<index; i++){
-              message.react(number[i]);
-            }
-            const filter = (reaction, user) => {
-               return  user.id === msg.author.id;
-             };
-             await message.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] })
-              .then(collected => {
-                const reaction = collected.first();
-                console.log(reaction.emoji.name)
-             if (number.includes(reaction.emoji.name) ) {
-                left_sortie=user_sorties[number.indexOf(reaction.emoji.name)];
-               msg.reply("Sortie "+left_sortie.description+" annulée!");
-               participants=left_sortie.participants;
-               for(j=0;j<participants.length;j++){
-                 client.users.fetch(participants[j]).then(participant => {
-                     participant.createDM().then(dmchannel => {
-                         dmchannel.send("Ta sortie **" + left_sortie.description + "** est **" + " annulée** !");
-               });});}
-               sorties.splice(sorties.indexOf(left_sortie));
-               setSorties(fichierSortie,sorties);
-               message.delete();
-             }})
-               .catch(collected => {
-  msg.reply('Aurevoir');
-});
-});
-}}
+                const filter = (reaction, user) => {
+                    return  user.id === msg.author.id;
+                };
+
+                await message.awaitReactions(filter, { max: 1, time: 30000, errors: ['time'] })
+                .then(collected => {
+                    const reaction = collected.first();
+                    if (number.includes(reaction.emoji.name)) {
+                        left_sortie = sortiesUtilisateur[number.indexOf(reaction.emoji.name)];
+                        msg.reply("Sortie " + left_sortie.description + " annulée!");
+
+                        participants = left_sortie.participants;
+
+                        for(j = 0; j < participants.length; j++) {
+                            client.users.fetch(participants[j]).then(participant => {
+                                participant.createDM().then(dmchannel => {
+                                    dmchannel.send("La sortie **" + left_sortie.description + "** est **" + "annulée** !");
+                                });
+                            });
+                        }
+
+                        sorties.splice(sorties.indexOf(left_sortie));
+                        setSorties(fichierSortie,sorties);
+                        message.delete();
+                    }
+                }).catch(collected => {
+                    message.delete();
+                    msg.reply('Vous n\'avez rien sélectioner, la demande à été annulée !');
+                });
+            });
+        }
+    }
 });
 
 client.login(token);// .then(function () {const guild=client.guilds.get("ID DU SERVEUR");});
@@ -284,6 +299,20 @@ function getSorties(path) {
 
 function setSorties(path, sorties) {
     fs.writeFileSync(path, JSON.stringify(sorties), 'utf-8');
+}
+
+function getSortiesUtilisateur(userId) {
+    sorties = getSorties(fichierSortie);
+    sortiesUtilisateur = [];
+
+    for (var i = 0; i < sorties.length; i++) {
+        sortie = sorties[i];
+        if (sortie.demandeur == userId) {
+            sortiesUtilisateur.push(sortie);
+        }
+    }
+
+    return sortiesUtilisateur;
 }
 
 function messageSortieExiste(sorties, id) {
