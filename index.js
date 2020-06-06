@@ -24,7 +24,7 @@ cron.schedule('*/10 * * * * *', () => {
         if (minutesRestantes < 10) {
             if (minutesRestantes > 0) {
                 //Pas de problème, la sortie est notifiée
-                for (var j = 0; j < sortie.participants.length; i++) {
+                for (var j = 0; j < sortie.participants.length; j++) {
                     //Crash faut alouer de la mémoire ??
                     client.users.fetch(sortie.participants[j]).then(participant => {
                         participant.createDM().then(dmchannel => {
