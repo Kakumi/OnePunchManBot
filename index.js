@@ -216,7 +216,7 @@ client.on('message', msg => {
     }
 });
 
-client.login(token);
+client.login(token);// .then(function () {const guild=client.guilds.get("ID DU SERVEUR");});
 
 function getSorties(path) {
     if (fs.existsSync(path)) {
