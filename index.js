@@ -315,9 +315,9 @@ client.on('message', msg => {
             var noms=[];
           for(var i=0; i<participants.length; i++){
               client.users.fetch(participants[i]).then((participant) =>{
-              noms.push(participant.username);
-              if (i == participants.length){
-                msg.reply(" Les Participants de la Sortie " + sortie.description + " sont " + noms.join(" - ") );
+              noms.push("\t- "+participant.username);
+              if (noms.length == participants.length){
+                msg.reply(" Les Participants de la Sortie " + sortie.description + ":" + "\n" + noms.join("\n") );
               }
             }).catch((participant) => {
               msg.reply(" Un des participants n'existe plus ou ne fait plus parti du serveur! ");
