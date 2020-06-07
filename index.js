@@ -9,16 +9,13 @@ const prefix = '!';
 const levels = ['3', '21', '36', '51', '66', '81', '96', '111', '121', '141', '156', '171', '186', '200', '201'];
 const pingLevels = ['718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206'];
 const token = "NzE4MDQ2ODQwMzUxNzUyMjIy.XtomRw.qxEcogAww-21mYU3CL2BWBbGxDw";
-const channelSortieId = "718495899306688552";
-const guildFolder = "OPM";
-const fichierSortie = guildFolder + '/sortie.json';
 const number = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
 const sortieMax = 5;
 const id_numbers=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-var id_sortie= last_id();
+var id_sortie= "00000";
 
-cron.schedule('*/10 * * * * *', () => {
-    sorties = getSorties(fichierSortie);
+cron.schedule('*/60 * * * * *', () => {
+    sorties = getAllSorties();
     onloop=true;
     for (var i = 0; i < sorties.length; i++) {
         sortie = sorties[i];
@@ -42,23 +39,41 @@ cron.schedule('*/10 * * * * *', () => {
         }
     }});
 
+client.on('guildCreate', (guild) => {
+  fs.mkdir(guild.name.split(" ").join("_"), function(err) {
+      if (err) {
+          console.log(err)
+      }
+});
+guild.channels.create("Sorties",{ reason: 'Channel des sorties' }).then( (channel) => {
+  let data=fs.readFileSync("channel.txt", 'utf-8');
+  fs.writeFileSync("channel.txt", data+" "+channel.id, 'utf-8');
+  fs.writeFileSync(guild.name.split(" ").join("_")+"/id.txt", channel.id, 'utf-8');
+});
+
+});
+
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
+  id_channel=fs.readFileSync("channel.txt",'utf-8').split();
   opm = client.guilds.cache.get("715536136365277185");
-  channelSortie = opm.channels.cache.get(channelSortieId);
-
-  sorties = getSorties(fichierSortie);
-
+  sorties = getAllSorties();
+  id_channel.forEach( (id) => {
+    channelSortie = opm.channels.cache.get(id);
     for (var i = 0; i < sorties.length; i++) {
         sortie = sorties[i];
         console.log("Tentative mise en cache du message " + sortie.message);
         channelSortie.messages.fetch(sortie.message);
     }
+  } )
+
+
+
 });
 
 client.on('messageReactionAdd', (messageReaction, user) => {
     const message = messageReaction.message;
-    sorties = getSorties(fichierSortie);
+    sorties = getSorties(messageReaction.message.guild.name.split(" ").join("_")+"/sortie.json");
     indexSortie = messageSortieExiste(sorties, message.id);
     if (indexSortie === false) {
         return false;
@@ -79,14 +94,14 @@ client.on('messageReactionAdd', (messageReaction, user) => {
                 "\n" +
                 "Amusez-vous bien 😄");
             });
-            setSorties(fichierSortie, sorties);
+            setSorties(messageReaction.message.guild.name.split(" ").join("_")+"/sortie.json", sorties);
         }
     }
 });
 
 client.on('messageReactionRemove', (messageReaction, user) => {
     const message = messageReaction.message;
-    sorties = getSorties(fichierSortie);
+    sorties = getSorties(messageReaction.message.guild.name.split(" ").join("_")+"/sortie.json");
     if (indexSortie === false) {
         return false;
     }
@@ -101,7 +116,7 @@ client.on('messageReactionRemove', (messageReaction, user) => {
                 user.createDM().then(dmchannel => {
                     dmchannel.send("Vous retirer votre participation à **" + sortie.description + "** !");
                 });
-                setSorties(fichierSortie, sorties);
+                setSorties(messageReaction.message.guild.name.split(" ").join("_")+"/sortie.json", sorties);
             }
         }
     }
@@ -122,11 +137,12 @@ client.on('message', msg => {
       })
   }
   else if (msg.content === 'stop') {
+      console.log(client.user.id);
       client.destroy();
   }
   else if (msg.content.startsWith(prefix + 'sorties')) {
     message = "Voici tes prochaines sortie : \n";
-    sorties = getSorties(fichierSortie);
+    sorties = getSorties(msg.guild.name.split(" ").join("_")+"/sortie.json");
     nbSorties = 0;
 
     for (var i = 0; i < sorties.length; i++) {
@@ -148,6 +164,7 @@ client.on('message', msg => {
     msg.reply(message);
   }
   else if (msg.content.startsWith(prefix + 'sortie')) {
+        id_sortie=last_id(msg.guild);
         content = msg.content.replace(/\[|\]/gm, "");
         nouvelleSortie = new Object();
         const args = content.slice(prefix.length).split(' ');
@@ -158,7 +175,7 @@ client.on('message', msg => {
             return false;
         }
 
-        objetSortieUtilisateur = getSortiesUtilisateur(msg.author.id);
+        objetSortieUtilisateur = getSortiesUtilisateur(msg.author.id,msg.guild);
         if (objetSortieUtilisateur.length >= sortieMax) {
             msg.channel.send("Vous avez atteint la limite de création de sortie !");
             return false;
@@ -207,33 +224,33 @@ client.on('message', msg => {
                 embed.addField("Date :", nouvelleSortie.jour + "/" + nouvelleSortie.mois + "/" + nouvelleSortie.annee + " à " + nouvelleSortie.heure + ":" + nouvelleSortie.minutes, false);
                 embed.setAuthor(sender.username, sender.displayAvatarURL());
 
-                msg.guild.channels.cache.get(channelSortieId).send("<@&" + role + '> Voici la sortie prévue :', embed).then(message => {
+                msg.guild.channels.cache.get(fs.readFileSync(msg.guild.name.split(" ").join("_")+"/id.txt", 'utf-8')).send("<@&" + role + '> Voici la sortie prévue :', embed).then(message => {
                     nouvelleSortie.message = message.id;
                     message.react('✅');
 
                     try {
-                        if (!fs.existsSync(guildFolder + "/")) {
-                            fs.mkdir(guildFolder, function(err) {
+                        if (!fs.existsSync(msg.guild.name.split(" ").join("_") + "/")) {
+                            fs.mkdir(msg.guild.name.split(" ").join("_"), function(err) {
                                 if (err) {
                                     console.log(err)
                                 }
                             });
                         }
-                        sorties = getSorties(fichierSortie);
+                        sorties = getSorties(msg.guild.name.split(" ").join("_")+"/sortie.json");
                     } catch(err) {
                         console.error(err)
                     }
 
                     sorties.push(nouvelleSortie);
-                    setSorties(fichierSortie, sorties);
+                    setSorties(msg.guild.name.split(" ").join("_")+"/sortie.json", sorties);
                 });
             });
         });
     }
 
     else if(msg.content.startsWith(prefix + 'remove')){
-        sorties = getSorties(fichierSortie);
-        sortiesUtilisateur = getSortiesUtilisateur(msg.author.id);
+        sorties = getSorties(msg.guild.name.split(" ").join("_")+"/sortie.json");
+        sortiesUtilisateur = getSortiesUtilisateur(msg.author.id,msg.guild);
 
         send = "";
 
@@ -275,7 +292,7 @@ client.on('message', msg => {
                         }
 
                         sorties.splice(sorties.indexOf(left_sortie));
-                        setSorties(fichierSortie,sorties);
+                        setSorties(msg.guild.name.split(" ").join("_")+"/sortie.json",sorties);
                         message.delete();
                     }
                 }).catch(collected => {
@@ -287,7 +304,7 @@ client.on('message', msg => {
     }
     else if(msg.content.startsWith(prefix + "participants")){
       const args = msg.content.slice(prefix.length).split(' ');
-      sorties = getSorties(fichierSortie);
+      sorties = getSorties(msg.guild.name.split(" ").join("_")+"/sortie.json");
       trouve=false;
       sorties.forEach( (sortie) =>  {
         console.log(sortie.id);
@@ -298,7 +315,7 @@ client.on('message', msg => {
           for(var i=0; i<participants.length; i++){
               client.users.fetch(participants[i]).then((participant) =>{
               noms.push(participant.username);
-              if (noms.length == participants.length){
+              if (i == participants.length){
                 msg.reply(" Les Participants de la Sortie " + sortie.description + " sont " + noms.join(" - ") );
               }
             }).catch((participant) => {
@@ -319,8 +336,7 @@ client.on('message', msg => {
     }
 });
 
-client.login(token);// .then(function () {const guild=client.guilds.get("ID DU SERVEUR");});
-
+client.login(token);
 function getSorties(path) {
     if (fs.existsSync(path)) {
         let rawDataSorties = fs.readFileSync(path);
@@ -332,12 +348,21 @@ function getSorties(path) {
     return sorties;
 }
 
+function getAllSorties() {
+      sorties=[];
+      client.guilds.cache.each((guild) => {
+        sorties.concat(getSorties(guild.name.split(" ").join("_")+"/sortie.json"));
+     });
+      return sorties;
+}
+
+
 function setSorties(path, sorties) {
     fs.writeFileSync(path, JSON.stringify(sorties), 'utf-8');
 }
 
-function getSortiesUtilisateur(userId) {
-    sorties = getSorties(fichierSortie);
+function getSortiesUtilisateur(userId,guild) {
+    sorties = getSorties(guild.name.split(" ").join("_")+"/sortie.json");
     sortiesUtilisateur = [];
 
     for (var i = 0; i < sorties.length; i++) {
@@ -387,9 +412,9 @@ function new_id()
   return id_sortie;
 }
 
-function last_id()
+function last_id(guild)
 {
-  sorties=getSorties(fichierSortie);
+  sorties=getSorties(guild.name.split(" ").join("_")+"/sortie.json");
   if(sorties.length == 0){
     return "00000";
   }
