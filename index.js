@@ -298,8 +298,7 @@ client.on('message', msg => {
           for(var i=0; i<participants.length; i++){
               client.users.fetch(participants[i]).then((participant) =>{
               noms.push(participant.username);
-              console.log(i);
-              if (i == participants.length){
+              if (noms.length == participants.length){
                 msg.reply(" Les Participants de la Sortie " + sortie.description + " sont " + noms.join(" - ") );
               }
             }).catch((participant) => {
