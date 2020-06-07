@@ -14,6 +14,8 @@ const guildFolder = "OPM";
 const fichierSortie = guildFolder + '/sortie.json';
 const number = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
 const sortieMax = 5;
+const id_numbers=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+var id_sortie= last_id();
 
 cron.schedule('*/10 * * * * *', () => {
     sorties = getSorties(fichierSortie);
@@ -39,7 +41,6 @@ cron.schedule('*/10 * * * * *', () => {
             //On doit supprimer la sortie
         }
     }});
-
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
@@ -180,6 +181,7 @@ client.on('message', msg => {
         nouvelleSortie.heure = dateSortie.getHours();
         nouvelleSortie.minutes = dateSortie.getMinutes();
         nouvelleSortie.participants = [];
+        nouvelleSortie.id=new_id();
 
         nouvelleSortie.description = "";
         for (var i = 3; i < args.length; i++) {
@@ -199,15 +201,16 @@ client.on('message', msg => {
                 embed.setColor(0xff0000);
                 embed.setTitle('Nouvelle sortie de guilde !');
                 embed.setDescription(nouvelleSortie.description + "\nCliquer sur ✅ pour participer !");
+                embed.addField("Id Sortie : "+id_sortie);
                 embed.addField("Niveau requis :", nouvelleSortie.niveau, true);
                 embed.addField("Demandeur :", sender.username, true);
                 embed.addField("Date :", nouvelleSortie.jour + "/" + nouvelleSortie.mois + "/" + nouvelleSortie.annee + " à " + nouvelleSortie.heure + ":" + nouvelleSortie.minutes, false);
                 embed.setAuthor(sender.username, sender.displayAvatarURL());
-    
+
                 msg.guild.channels.cache.get(channelSortieId).send("<@&" + role + '> Voici la sortie prévue :', embed).then(message => {
                     nouvelleSortie.message = message.id;
                     message.react('✅');
-    
+
                     try {
                         if (!fs.existsSync(guildFolder + "/")) {
                             fs.mkdir(guildFolder, function(err) {
@@ -220,7 +223,7 @@ client.on('message', msg => {
                     } catch(err) {
                         console.error(err)
                     }
-    
+
                     sorties.push(nouvelleSortie);
                     setSorties(fichierSortie, sorties);
                 });
@@ -282,6 +285,39 @@ client.on('message', msg => {
             });
         }
     }
+    else if(msg.content.startsWith(prefix + "participants")){
+      const args = msg.content.slice(prefix.length).split(' ');
+      sorties = getSorties(fichierSortie);
+      trouve=false;
+      sorties.forEach( (sortie) =>  {
+        console.log(sortie.id);
+        if(sortie.id == args[1]){
+          if(sortie.participants.length!=0){
+            participants=sortie.participants;
+            var noms=[];
+          for(var i=0; i<participants.length; i++){
+              client.users.fetch(participants[i]).then((participant) =>{
+              noms.push(participant.username);
+              console.log(i);
+              if (i == participants.length){
+                msg.reply(" Les Participants de la Sortie " + sortie.description + " sont " + noms.join(" - ") );
+              }
+            }).catch((participant) => {
+              msg.reply(" Un des participants n'existe plus ou ne fait plus parti du serveur! ");
+            });
+
+          }
+          }
+          else{
+            msg.reply( " Il n' y a pas de participants actuellement pour la " + sortie.description );
+          }
+          trouve=true;
+        }
+      });
+      if(!trouve){
+        msg.reply(" Pas de sortie avec cette id ");
+      }
+    }
 });
 
 client.login(token);// .then(function () {const guild=client.guilds.get("ID DU SERVEUR");});
@@ -328,4 +364,37 @@ function diff_minutes(dt1, dt2)
     var diff = (dt1.getTime() - dt2.getTime()) / 1000;
     diff /= 60;
     return Math.round(diff); //Math.abs() pour valeur absolue
+}
+
+function new_id()
+{
+  id=id_sortie.split("");
+  var max_index=id.length-1;
+  if (id[max_index] == "9"){
+    id[max_index] = "0";
+    index=max_index;
+    while(id[index-1] == "9" && index>0 ){
+      id[index-1] = "0";
+      index = index-1;
+    }
+    if (index>0){
+      id[index-1]=id_numbers[id_numbers.indexOf(id[index-1])+1];
+    }
+  }
+    else{
+      id[max_index] = id_numbers[id_numbers.indexOf(id[max_index])+ 1];
+    }
+ id_sortie=id.join("");
+  return id_sortie;
+}
+
+function last_id()
+{
+  sorties=getSorties(fichierSortie);
+  if(sorties.length == 0){
+    return "00000";
+  }
+  else{
+  return sorties[sorties.length-1].id;
+}
 }
