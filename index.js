@@ -46,8 +46,6 @@ client.on('guildCreate', (guild) => {
       }
 });
 guild.channels.create("Sorties",{ reason: 'Channel des sorties' }).then( (channel) => {
-  let data=fs.readFileSync("channel.txt", 'utf-8');
-  fs.writeFileSync("channel.txt", data+" "+channel.id, 'utf-8');
   fs.writeFileSync(guild.name.split(" ").join("_")+"/id.txt", channel.id, 'utf-8');
 });
 
@@ -55,17 +53,20 @@ guild.channels.create("Sorties",{ reason: 'Channel des sorties' }).then( (channe
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
-  id_channel=fs.readFileSync("channel.txt",'utf-8').split();
-  opm = client.guilds.cache.get("715536136365277185");
-  sorties = getAllSorties();
-  id_channel.forEach( (id) => {
-    channelSortie = opm.channels.cache.get(id);
+    sorties = getAllSorties();
+   client.guilds.cache.forEach( (guild) => {
+    channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_")+"/id.txt",'utf-8'));
     for (var i = 0; i < sorties.length; i++) {
         sortie = sorties[i];
         console.log("Tentative mise en cache du message " + sortie.message);
-        channelSortie.messages.fetch(sortie.message);
+        channelSortie.messages.fetch(sortie.message).catch((error) => {
+          console.error(error);
+        });
     }
-  } )
+
+  });
+
+
 
 
 
