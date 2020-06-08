@@ -14,30 +14,48 @@ const sortieMax = 5;
 const id_numbers=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 var id_sortie= "00000";
 
-cron.schedule('*/60 * * * * *', () => {
-    sorties = getAllSorties();
-    onloop=true;
-    for (var i = 0; i < sorties.length; i++) {
-        sortie = sorties[i];
-        dateMaintenant = new Date();
-        dateSortie = new Date(sortie.annee, sortie.mois - 1, sortie.jour, sortie.heure, sortie.minutes);
-        minutesRestantes = diff_minutes(dateSortie, dateMaintenant);
-        if (minutesRestantes < 10) {
-            if (minutesRestantes > 0) {
-                //Pas de problème, la sortie est notifiée
-                for (var j = 0; j < sortie.participants.length; j++) {
-                    //Crash faut alouer de la mémoire ??
-                    client.users.fetch(sortie.participants[j]).then(participant => {
-                        participant.createDM().then(dmchannel => {
-                            dmchannel.send("Ta sortie **" + sortie.description + "** est prévue dans **" + minutesRestantes + " minutes** !");
+cron.schedule('*/15 * * * * *', () => {
+    client.guilds.cache.each(guild => {
+        fichierSortie = guild.name.split(" ").join("_") + "/sortie.json";
+
+        sorties = getSorties(fichierSortie);
+        sortiesRestante = [];
+
+        for (var i = 0; i < sorties.length; i++) {
+            sortie = sorties[i];
+
+            dateMaintenant = new Date();
+            dateSortie = new Date(sortie.annee, sortie.mois - 1, sortie.jour, sortie.heure, sortie.minutes);
+            minutesRestantes = diff_minutes(dateSortie, dateMaintenant);
+
+            if (minutesRestantes <= 10) {
+                if (minutesRestantes > 0) {
+
+                    //Pas de problème, la sortie est notifiée
+                    for (var j = 0; j < sortie.participants.length; j++) {
+                        client.users.fetch(sortie.participants[j]).then(participant => {
+                            participant.createDM().then(dmchannel => {
+                                dmchannel.send("Ta sortie **" + sortie.description + "** est prévue dans **" + minutesRestantes + " minutes** !");
+                            });
                         });
+                    }
+    
+                    channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_")+"/id.txt",'utf-8'));
+                    channelSortie.messages.fetch(sortie.message).then(message => {
+                        message.delete();
+                    }).catch((error) => {
+                        console.error(error);
                     });
                 }
+            } else {
+                //Sortie pas notifiée, on la remet dans le fichier
+                sortiesRestante.push(sortie);
             }
-
-            //On doit supprimer la sortie
         }
-    }});
+    
+        setSorties(fichierSortie, sortiesRestante);
+    });
+});
 
 client.on('guildCreate', (guild) => {
   fs.mkdir(guild.name.split(" ").join("_"), function(err) {
@@ -45,8 +63,9 @@ client.on('guildCreate', (guild) => {
           console.log(err)
       }
 });
+
 guild.channels.create("Sorties",{ reason: 'Channel des sorties' }).then( (channel) => {
-  fs.writeFileSync(guild.name.split(" ").join("_")+"/id.txt", channel.id, 'utf-8');
+    fs.writeFileSync(guild.name.split(" ").join("_")+"/id.txt", channel.id, 'utf-8');
 });
 
 });
@@ -54,22 +73,17 @@ guild.channels.create("Sorties",{ reason: 'Channel des sorties' }).then( (channe
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
     sorties = getAllSorties();
-   client.guilds.cache.forEach( (guild) => {
-    channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_")+"/id.txt",'utf-8'));
-    for (var i = 0; i < sorties.length; i++) {
-        sortie = sorties[i];
-        console.log("Tentative mise en cache du message " + sortie.message);
-        channelSortie.messages.fetch(sortie.message).catch((error) => {
-          console.error(error);
-        });
-    }
 
-  });
-
-
-
-
-
+    client.guilds.cache.forEach( (guild) => {
+        channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_")+"/id.txt",'utf-8'));
+        for (var i = 0; i < sorties.length; i++) {
+            sortie = sorties[i];
+            console.log("Tentative mise en cache du message " + sortie.message);
+            channelSortie.messages.fetch(sortie.message).catch((error) => {
+                //console.error(error);
+            });
+        }
+    });
 });
 
 client.on('messageReactionAdd', (messageReaction, user) => {
@@ -188,7 +202,7 @@ client.on('message', msg => {
         heures = args[2].replace(/h/gm, ":").split(':');
         dateSortie = new Date(date[2], date[1] - 1, date[0], heures[0], heures[1]); //Car index du mois entre 0 et 11
 
-        if (diff_minutes(dateSortie, new Date()) <= 0) {
+        if (isNaN(dateSortie) || dateSortie == null || diff_minutes(dateSortie, new Date()) <= 0) {
             msg.channel.send("La date est invalide !");
             return false;
         }
@@ -219,7 +233,7 @@ client.on('message', msg => {
                 embed.setColor(0xff0000);
                 embed.setTitle('Nouvelle sortie de guilde !');
                 embed.setDescription(nouvelleSortie.description + "\nCliquer sur ✅ pour participer !");
-                embed.addField("Id Sortie : "+id_sortie);
+                embed.addField("Id Sortie : ", id_sortie);
                 embed.addField("Niveau requis :", nouvelleSortie.niveau, true);
                 embed.addField("Demandeur :", sender.username, true);
                 embed.addField("Date :", nouvelleSortie.jour + "/" + nouvelleSortie.mois + "/" + nouvelleSortie.annee + " à " + nouvelleSortie.heure + ":" + nouvelleSortie.minutes, false);
@@ -308,27 +322,28 @@ client.on('message', msg => {
       sorties = getSorties(msg.guild.name.split(" ").join("_")+"/sortie.json");
       trouve=false;
       sorties.forEach( (sortie) =>  {
-        console.log(sortie.id);
         if(sortie.id == args[1]){
-          if(sortie.participants.length!=0){
-            participants=sortie.participants;
-            var noms=[];
-          for(var i=0; i<participants.length; i++){
-              client.users.fetch(participants[i]).then((participant) =>{
-              noms.push("\t- "+participant.username);
-              if (noms.length == participants.length){
-                msg.reply(" Les Participants de la Sortie " + sortie.description + ":" + "\n" + noms.join("\n") );
-              }
-            }).catch((participant) => {
-              msg.reply(" Un des participants n'existe plus ou ne fait plus parti du serveur! ");
-            });
+            if(sortie.participants.length!=0) {
+                participants = sortie.participants;
 
-          }
-          }
-          else{
-            msg.reply( " Il n' y a pas de participants actuellement pour la " + sortie.description );
-          }
-          trouve=true;
+                var noms=[];
+                nbErreur = 0;
+                for(var i=0; i<participants.length; i++){
+                    client.users.fetch(participants[i]).then((participant) =>{
+                        noms.push("\t- "+participant.username);
+                        if (noms.length == participants.length - nbErreur){
+                            msg.reply(" Les Participants de la Sortie " + sortie.description + ":" + "\n" + noms.join("\n") );
+                        }
+                    }).catch((participant) => {
+                        nbErreur++;
+                        msg.reply(" Un des participants n'existe plus ou ne fait plus parti du serveur! ");
+                    });
+      
+                }
+            } else{
+                msg.reply( " Il n' y a pas de participants actuellement pour la " + sortie.description );
+            }
+            trouve=true;
         }
       });
       if(!trouve){
@@ -338,6 +353,7 @@ client.on('message', msg => {
 });
 
 client.login(token);
+
 function getSorties(path) {
     if (fs.existsSync(path)) {
         let rawDataSorties = fs.readFileSync(path);
