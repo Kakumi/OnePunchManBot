@@ -14,6 +14,10 @@ const sortieMax = 5;
 const id_numbers=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 var id_sortie= "00000";
 
+//données WAKFU json
+const items = JSON.parse(fs.readFileSync("Wakfu_json/items.json"));
+const actions = JSON.parse(fs.readFileSync("Wakfu_json/actions.json"));
+
 cron.schedule('*/15 * * * * *', () => {
     client.guilds.cache.each(guild => {
         fichierSortie = guild.name.split(" ").join("_") + "/sortie.json";
@@ -39,7 +43,7 @@ cron.schedule('*/15 * * * * *', () => {
                             });
                         });
                     }
-    
+
                     channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_")+"/id.txt",'utf-8'));
                     channelSortie.messages.fetch(sortie.message).then(message => {
                         message.delete();
@@ -52,7 +56,7 @@ cron.schedule('*/15 * * * * *', () => {
                 sortiesRestante.push(sortie);
             }
         }
-    
+
         setSorties(fichierSortie, sortiesRestante);
     });
 });
@@ -73,7 +77,6 @@ guild.channels.create("Sorties",{ reason: 'Channel des sorties' }).then( (channe
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
     sorties = getAllSorties();
-
     client.guilds.cache.forEach( (guild) => {
         channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_")+"/id.txt",'utf-8'));
         for (var i = 0; i < sorties.length; i++) {
@@ -338,7 +341,7 @@ client.on('message', msg => {
                         nbErreur++;
                         msg.reply(" Un des participants n'existe plus ou ne fait plus parti du serveur! ");
                     });
-      
+
                 }
             } else{
                 msg.reply( " Il n' y a pas de participants actuellement pour la " + sortie.description );
@@ -350,8 +353,41 @@ client.on('message', msg => {
         msg.reply(" Pas de sortie avec cette id ");
       }
     }
-});
 
+    else if(msg.content.startsWith( prefix + 'bonus' )){
+      const rarity = [ "**Commun**" , "**Rare**" , "**Mythique**" , "**Légendaire**", "**Relique**", "**Souvenir**", "**Epique**" ]
+      const args = msg.content.slice(6);
+      trouve=false;
+      var res = "";
+      items.forEach( item => {
+        try{
+        if (item.title.fr.toLowerCase().split(" ").join("") == args.toLowerCase().split(" ").join("")){
+          if(!trouve){
+          res = res + item.title.fr + "\n";
+          trouve=true;}
+          res = res + rarity[item.definition.item.baseParameters.rarity-1] + "\n";
+          item.definition.equipEffects.forEach( effect => {
+            actions.forEach( action => {
+            if (action.definition.id == effect.effect.definition.actionId ){
+              res = res + replaceAll(action.description.fr,["[#1]","[#2]","[#3]","[#4]"],effect.effect.definition.params,item.definition.item.level) +"\n";
+            }
+          });
+        });
+        res = res + "\n";
+      }}
+      catch{
+        console.log('pas de titre');
+      }
+    });
+    if(trouve){
+    msg.reply(res);
+  }
+  else{
+    msg.reply(" Pas d'items ayant ce nom : "+ args);
+  }
+};
+
+});
 client.login(token);
 
 function getSorties(path) {
@@ -438,4 +474,50 @@ function last_id(guild)
   else{
   return sorties[sorties.length-1].id;
 }
+}
+
+function replaceAll(string,outs,substitute,lvl){
+  string = remove_things(string);
+  pair=[0,1]
+  for( var i=0; i<substitute.length; i++){
+  if( i == 0 ){
+  string = string.split(outs[i]).join(substitute[pair[1]]*lvl+substitute[pair[0]]);
+  }
+  else{
+  string = string.split(outs[i]).join(substitute[i+1]);
+}}
+return string;}
+
+function remove_things(string){
+  const enlever = ['[~3]?[#1] Maîtrise [#3]:',  '[~3]?[#1] Mastery [#3]:',
+    '[~3]?[#1] Résistance [#3]:',
+    '[~3]?[#1] Resistance [#3]:',
+    '[>1]?',
+    '[>2]?s:',
+    '{[>2]?:s}',
+    '[=2]?:s',
+    '[=2]?s:',
+    '[=2]?:',
+    '[~3]?',
+    "{",
+    "}",
+    '[el1]',
+    '[el2]',
+    '[el3]',
+    '[el4]' ];
+
+    const element = [ "feu","eau","terre","air"];
+    enlever.forEach( elt => {
+      if ( elt.includes('[>2]') ){
+        string = string.split(elt).join("s");
+      }
+      else if ( elt.includes('[el') ){
+        string = string.split(elt).join(element[elt[3]-1])
+      }
+      else{
+      string = string.split(elt).join("");}
+    });
+    return string;
+
+
 }
