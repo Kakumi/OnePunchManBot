@@ -357,12 +357,20 @@ client.on('message', msg => {
     else if(msg.content.startsWith( prefix + 'bonus' )){
       const rarity = [ "**Commun**" , "**Rare**" , "**Mythique**" , "**Légendaire**", "**Relique**", "**Souvenir**", "**Epique**" ]
       const args = msg.content.slice(6);
-      trouve=false;
+      const text = args.toLowerCase().split(" ").join("");
+      marge = Math.floor(text.length/5+1);
+      console.log(marge);
+      var trouve = false;
+      var old_title = undefined;
       var res = "";
       items.forEach( item => {
         try{
-        if (item.title.fr.toLowerCase().split(" ").join("") == args.toLowerCase().split(" ").join("")){
+        if (distance(item.title.fr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join(""),text)  <= marge ){
+          if( item.title.fr != old_title && old_title != undefined ){
+            trouve=false;
+          }
           if(!trouve){
+          old_title = item.title.fr;
           res = res + item.title.fr + "\n";
           trouve=true;}
           res = res + rarity[item.definition.item.baseParameters.rarity-1] + "\n";
@@ -548,3 +556,39 @@ function remove_things(string){
 
 
 }
+
+function distance(s1,s2){
+  const m = s1.length;
+  const n = s2.length;
+  var mat=[];
+  for(i=0;i<m+1;i++){
+    mat[i]=[];
+    for(j=0;j<n+1;j++){
+      mat[i][j]=0;
+    }
+  }
+  var cout = 0;
+
+  for( i=0; i<=m; i++){
+    mat[i][0] = i;
+  }
+  for( j=0; j<=n; j++){
+    mat[0][j] = j;
+  }
+  for( i=1; i<=m; i++){
+    for( j=1; j<=n; j++){
+      if( s1[i-1] == s2[j-1] ){
+        cout = 0;
+      }
+      else{
+        cout = 1;
+      }
+      mat[i][j] = Math.min(mat[i-1][j] + 1,
+               mat[i][j-1] + 1,
+               mat[i-1][j-1] + cout );
+    }
+  }
+  return mat[m][n];
+
+}
+console.log(distance("godron","boulon"));
