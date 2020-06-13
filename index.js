@@ -385,8 +385,35 @@ client.on('message', msg => {
   else{
     msg.reply(" Pas d'items ayant ce nom : "+ args);
   }
-};
+}
 
+  else if( msg.content.startsWith( prefix + 'help' )){
+    const args = msg.content.slice(6);
+    const help = {
+      "sortie": "```css\n !sortie \n Arguments : [lvl requis] [date : jj/mm/aaaa] [heure] [nom de la sortie] \n But : [Création d'une sortie] ```",
+      "sorties": "```css\n!sorties : [affiche les sorties auxquelles vous participez]```",
+      "participants": "```css\n!participants \n **Arguments** : [id de la sortie ( dispo dans le message de la sortie )] \n But : [Affiche les Participants de la Sortie avec l'id correspondant]```",
+      "remove": "```css\n!remove \n Arguments : [id de la sortie ( dispo dans le message de la sortie )] \n But : [Détruit la Sortie avec l'id correspondant]```",
+      "Unprediktable": "```css\n'Nous craignons ne pouvoir vous en dire d'avantage...'```",
+      "bonus": "```css\n!bonus \n Arguments : [nom de l'item ( sans fautes )] \n But : [Donne les stats de l'item en question] ```",
+      "help": "```css\n!help \n Arguments : [Facultatif : nom de la commande] \n But : [Donne les infos d'utilisation de la commande ou les commandes disponibles si aucun arguments] ```"
+    };
+    if( help[args]!=undefined ){
+      msg.reply(help[args]);
+    }
+    else if( args == ""){
+      var reply = "\n>>> Commandes Disponibles : \n";
+      for( var key in help ){
+        if ( key!= "Unprediktable" ) {
+        reply = reply + "-\t"+key+"\n";
+      }
+      }
+      msg.reply(reply);
+    }
+    else{
+      msg.reply(" Pas de commande se nommant : " + args );
+    }
+  }
 });
 client.login(token);
 
