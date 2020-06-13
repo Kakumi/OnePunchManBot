@@ -13,6 +13,7 @@ const number = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7�
 const sortieMax = 5;
 const id_numbers=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 var id_sortie= "00000";
+const rarity = [ "**Commun**" , "**Rare**" , "**Mythique**" , "**Légendaire**", "**Relique**", "**Souvenir**", "**Epique**" ];
 
 //données WAKFU json
 const items = JSON.parse(fs.readFileSync("Wakfu_json/items.json"));
@@ -355,7 +356,6 @@ client.on('message', msg => {
     }
 
     else if(msg.content.startsWith( prefix + 'bonus' )){
-      const rarity = [ "**Commun**" , "**Rare**" , "**Mythique**" , "**Légendaire**", "**Relique**", "**Souvenir**", "**Epique**" ]
       const args = msg.content.slice(6);
       const text = args.toLowerCase().split(" ").join("");
       marge = Math.floor(text.length/5+1);
@@ -381,10 +381,11 @@ client.on('message', msg => {
             }
           });
         });
+
         res = res + "\n";
       }}
       catch{
-        console.log('pas de titre');
+        console.log(item);
       }
     });
     if(trouve){
@@ -403,8 +404,10 @@ client.on('message', msg => {
       "participants": "```css\n!participants \n **Arguments** : [id de la sortie ( dispo dans le message de la sortie )] \n But : [Affiche les Participants de la Sortie avec l'id correspondant]```",
       "remove": "```css\n!remove \n Arguments : [id de la sortie ( dispo dans le message de la sortie )] \n But : [Détruit la Sortie avec l'id correspondant]```",
       "Unprediktable": "```css\n'Nous craignons ne pouvoir vous en dire d'avantage...'```",
-      "bonus": "```css\n!bonus \n Arguments : [nom de l'item ( sans fautes )] \n But : [Donne les stats de l'item en question] ```",
-      "help": "```css\n!help \n Arguments : [Facultatif : nom de la commande] \n But : [Donne les infos d'utilisation de la commande ou les commandes disponibles si aucun arguments] ```"
+      "bonus": "```css\n!bonus \n Arguments : [nom de l'item ] \n But : [Donne les stats de l'item en question] ```",
+      "help": "```css\n!help \n Arguments : [Facultatif : nom de la commande] \n But : [Donne les infos d'utilisation de la commande ou les commandes disponibles si aucun arguments] ```",
+      "vs": "```css\n!vs \n Arguments : [nom de l'item ( sans fautes )] / [nom de l'item] +1+2 ( exemple numéro = rareté, tapez !help rarete pour plus d'info) \n But : [Compare deux items] ```",
+      "rarete": "```css\nrarete \n1:commun\n2:rare\n3:mythique\n4:legendaire\n5:relique\n6:souvenir\n7:epique ```"
     };
     if( help[args]!=undefined ){
       msg.reply(help[args]);
@@ -422,7 +425,77 @@ client.on('message', msg => {
       msg.reply(" Pas de commande se nommant : " + args );
     }
   }
+  else if( msg.content.startsWith( prefix + 'vs' )){
+    const argu = msg.content.slice(4).split(" ").join("").split("+");
+    const args = argu[0].split("/");
+    var trouve = false;
+    var names = [];
+    var res = "```Markdown\n";
+    var i = -1;
+    var j = 0;
+    var compare = {};
+    args.forEach( arg => {
+                trouve=false;
+                i = i+1;
+                j = j+1;
+                compare[i] = {};
+    items.forEach( item => {
+      try{
+      if (distance(item.title.fr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join(""),arg)  <= 1 && item.definition.item.baseParameters.rarity == argu[j] ){
+        if(!trouve){
+        names.push(item.title.fr);
+        trouve=true;}
+        item.definition.equipEffects.forEach( effect => {
+          const param = effect.effect.definition.params;
+          actions.forEach( action => {
+          if (action.definition.id == effect.effect.definition.actionId ){
+            compare[i][action.definition.id] = [param[1]*item.definition.item.level+param[0], replaceAll(action.description.fr,["[#1]","[#2]","[#3]","[#4]"],param,item.definition.item.level)];
+          }
+        });
+      });
+  }
+}
+catch{}
+
 });
+});
+if(names.length != 2){
+  msg.reply("Les arguments fournis ne sont pas corrects! ");
+}
+else{
+const it = compare[0];
+const it2 = compare[1];
+var name = names[0].padEnd(42," ");
+var part = "";
+res = res + name + "| \t" + names[1] + "\n";
+keys = [];
+for( var key in it ){
+    keys.push(key);
+    if( it2[key] != undefined ){
+      diff = [it[key][0]-it2[key][0],it2[key][0]-it[key][0]];
+      part = it[key][1] +' (' + diff[0] + ')';
+      part = part.padEnd(42," ");
+      res = res + part + '| \t'+it2[key][1] +' (' + diff[1] + ') \n';
+    }
+    else{
+      part = "+" + it[key][1];
+      part = part.padEnd(42," ");
+      res = res + part + "| \n";
+    }
+  }
+for (var key in it2 ){
+  if( !(key in keys) ){
+    part = "+" + it2[key][1];
+    space = "";
+    space = space.padEnd(42," ");
+    res = res + space +  "|\t" + part + "\n";
+  }
+}
+res= res + '```';
+msg.reply(res);
+}}
+});
+
 client.login(token);
 
 function getSorties(path) {
@@ -557,6 +630,8 @@ function remove_things(string){
 
 }
 
+
+
 function distance(s1,s2){
   const m = s1.length;
   const n = s2.length;
@@ -591,4 +666,3 @@ function distance(s1,s2){
   return mat[m][n];
 
 }
-console.log(distance("godron","boulon"));
