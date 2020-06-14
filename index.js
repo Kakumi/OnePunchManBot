@@ -393,7 +393,8 @@ client.on('message', msg => {
       "bonus": "```css\n!bonus \n Arguments : [nom de l'item ] \n But : [Donne les stats de l'item en question] ```",
       "help": "```css\n!help \n Arguments : [Facultatif : nom de la commande] \n But : [Donne les infos d'utilisation de la commande ou les commandes disponibles si aucun arguments] ```",
       "vs": "```css\n!vs \n Arguments : [nom de l'item ( sans fautes )] / [nom de l'item] +1+2 ( exemple numéro = rareté, tapez !help rarete pour plus d'info) \n But : [Compare deux items] ```",
-      "rarete": "```css\nrarete \n1:commun\n2:rare\n3:mythique\n4:legendaire\n5:relique\n6:souvenir\n7:epique ```"
+      "rarete": "```css\nrarete \n1:commun\n2:rare\n3:mythique\n4:legendaire\n5:relique\n6:souvenir\n7:epique ```",
+      "chasse":"```css\n!chasse \n Arguments : [ chasses acuelles ] [ chasses voulue ] exemple : R/V R/V/B \n But : [ Donne des stats sur la réussite de la transformation ] ```"
     };
     if (help[args] != undefined) {
       msg.reply(help[args]);
@@ -486,21 +487,42 @@ client.on('message', msg => {
     const proba_chasses = [0.320, 0.418, 0.194, 0.068];
     var long = [];
     var colors = [];
-    args.forEach(arg => {
-      color = arg.split("/");
-      colors.push(color);
-      long.push(color.length);
-    });
-    var proba = 1;
-    console.log(colors[1]);
-    for (var i = 0; i < colors[1].length; i++) {
-      proba = proba * couleurs[colors[1][i]];
-    }
-    proba = 1 / proba;
-    if (long[0] < long[1]) {
-      msg.reply(Math.floor(1 / proba_chasses[long[1] - 1] + proba));
-    } else if (long[0] == long[1]) {
-      msg.reply(math.floor(proba));
+    const text = "\nNombre de relances moyenne pour les châsses voulues : ";
+    if (args[0].length > args[1].length) {
+      msg.reply("\n Veuillez fournir les bons paramètres! ");
+    } else {
+      args.forEach(arg => {
+        color = arg.split("/");
+        colors.push(color);
+        long.push(color.length);
+      });
+      var proba = 1;
+      for (var i = 0; i < colors[1].length; i++) {
+        proba = proba * couleurs[colors[1][i]];
+      }
+      proba = 1 / proba;
+      if (isNaN(proba)) {
+        msg.reply("\n Veuillez fournir les bons paramètres! ");
+      } else {
+        if (long[0] < long[1]) {
+          if (args[0] == args[1].substring(0, args[0].length)) {
+            nb_color = long[1] - long[0];
+            var chance = 1;
+            for (i = long[1] - 1; i > long[1] - 1 - nb_color; i--) {
+              chance = chance * couleurs[colors[1][i]];
+            }
+            msg.reply(text + Math.floor(1 / proba_chasses[long[1] - 1] + proba) + "\n" + " Chances d'avoir les couleurs voulues au premier casse : " + chance * 100 + "%");
+          } else {
+            msg.reply(text + Math.floor(1 / proba_chasses[long[1] - 1] + proba));
+          }
+        } else if (long[0] == long[1]) {
+          if (JSON.stringify(colors[0]) == JSON.stringify(colors[1]))
+            msg.reply(text + "0");
+          else {
+            msg.reply(text + Math.floor(proba));
+          }
+        }
+      }
     }
   }
 
