@@ -144,18 +144,8 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 });
 
 client.on('message', msg => {
-  if (msg.content === prefix + 'ping') {
-    msg.channel.send('This is an embed', {
-      embed: {
-        thumbnail: {
-          url: 'attachment://file.png'
-        }
-      },
-      files: [{
-        attachment: 'file.png',
-        name: 'file.png'
-      }]
-    })
+  if (msg.content === prefix + 'test') {
+    console.log(items[150]);
   } else if (msg.content === 'stop') {
     console.log(client.user.id);
     client.destroy();
@@ -356,7 +346,7 @@ client.on('message', msg => {
   } else if (msg.content.startsWith(prefix + 'bonus')) {
     const args = msg.content.slice(6);
     const text = args.toLowerCase().split(" ").join("");
-    marge = Math.floor(text.length / 5 + 1);
+    marge = Math.floor(text.length / 6 + 1);
     console.log(marge);
     var trouve = false;
     var old_title = undefined;
@@ -372,7 +362,7 @@ client.on('message', msg => {
             res = res + item.title.fr + "\n";
             trouve = true;
           }
-          res = res + rarity[item.definition.item.baseParameters.rarity - 1] + "\n";
+          res = res + rarity[item.definition.item.baseParameters.rarity - 1] + " lvl : " + item.definition.item.level + "\n";
           item.definition.equipEffects.forEach(effect => {
             actions.forEach(action => {
               if (action.definition.id == effect.effect.definition.actionId) {
@@ -479,13 +469,41 @@ client.on('message', msg => {
           part = "+" + it2[key][1];
           space = "";
           space = space.padEnd(42, " ");
-          res = res + space + "|\t" + part + "\n";
+          res = res + space + "| \t" + part + "\n";
         }
       }
       res = res + '```';
       msg.reply(res);
     }
+  } else if (msg.content.startsWith(prefix + 'chasse')) {
+    const args = msg.content.slice(8).split(" ");
+    const couleurs = {
+      "R": 0.308,
+      "V": 0.308,
+      "B": 0.308,
+      "J": 0.076
+    };
+    const proba_chasses = [0.320, 0.418, 0.194, 0.068];
+    var long = [];
+    var colors = [];
+    args.forEach(arg => {
+      color = arg.split("/");
+      colors.push(color);
+      long.push(color.length);
+    });
+    var proba = 1;
+    console.log(colors[1]);
+    for (var i = 0; i < colors[1].length; i++) {
+      proba = proba * couleurs[colors[1][i]];
+    }
+    proba = 1 / proba;
+    if (long[0] < long[1]) {
+      msg.reply(Math.floor(1 / proba_chasses[long[1] - 1] + proba));
+    } else if (long[0] == long[1]) {
+      msg.reply(math.floor(proba));
+    }
   }
+
 });
 
 client.login(token);
