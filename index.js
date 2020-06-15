@@ -14,6 +14,12 @@ const sortieMax = 5;
 const id_numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 var id_sortie = "00000";
 const rarity = ["**Commun**", "**Rare**", "**Mythique**", "**Légendaire**", "**Relique**", "**Souvenir**", "**Epique**"];
+const couleurs = {
+  "R": 0.308,
+  "V": 0.308,
+  "B": 0.308,
+  "J": 0.076
+};
 
 //données WAKFU json
 const items = JSON.parse(fs.readFileSync("Wakfu_json/items.json"));
@@ -394,7 +400,7 @@ client.on('message', msg => {
       "help": "```css\n!help \n Arguments : [Facultatif : nom de la commande] \n But : [Donne les infos d'utilisation de la commande ou les commandes disponibles si aucun arguments] ```",
       "vs": "```css\n!vs \n Arguments : [nom de l'item ( sans fautes )] / [nom de l'item] +1+2 ( exemple numéro = rareté, tapez !help rarete pour plus d'info) \n But : [Compare deux items] ```",
       "rarete": "```css\nrarete \n1:commun\n2:rare\n3:mythique\n4:legendaire\n5:relique\n6:souvenir\n7:epique ```",
-      "chasse":"```css\n!chasse \n Arguments : [ chasses acuelles ] [ chasses voulue ] exemple : R/V R/V/B \n But : [ Donne des stats sur la réussite de la transformation ] ```"
+      "chasse": "```css\n!chasse \n Arguments : [ chasses acuelles ] [ chasses voulue ] exemple : R/V R/V/B \n But : [ Donne des stats sur la réussite de la transformation ] ```"
     };
     if (help[args] != undefined) {
       msg.reply(help[args]);
@@ -478,17 +484,13 @@ client.on('message', msg => {
     }
   } else if (msg.content.startsWith(prefix + 'chasse')) {
     const args = msg.content.slice(8).split(" ");
-    const couleurs = {
-      "R": 0.308,
-      "V": 0.308,
-      "B": 0.308,
-      "J": 0.076
-    };
     const proba_chasses = [0.320, 0.418, 0.194, 0.068];
     var long = [];
     var colors = [];
     const text = "\nNombre de relances moyenne pour les châsses voulues : ";
-    if (args[0].length > args[1].length) {
+    if (args.length < 2) {
+      msg.reply("\n Veuillez fournir les bons paramètres! ");
+    } else if (args[0].length > args[1].length) {
       msg.reply("\n Veuillez fournir les bons paramètres! ");
     } else {
       args.forEach(arg => {
@@ -498,10 +500,14 @@ client.on('message', msg => {
       });
       var proba = 1;
       for (var i = 0; i < colors[1].length; i++) {
-        proba = proba * couleurs[colors[1][i]];
+        var add_blanche = 0;
+        if (colors[1][i] != "J") {
+          add_blanche = couleurs["J"];
+        }
+        proba = proba * (couleurs[colors[1][i]] + add_blanche);
       }
       proba = 1 / proba;
-      if (isNaN(proba)) {
+      if (isNaN(proba) || proba_chasses[long[1] - 1] == undefined) {
         msg.reply("\n Veuillez fournir les bons paramètres! ");
       } else {
         if (long[0] < long[1]) {
@@ -509,17 +515,22 @@ client.on('message', msg => {
             nb_color = long[1] - long[0];
             var chance = 1;
             for (i = long[1] - 1; i > long[1] - 1 - nb_color; i--) {
-              chance = chance * couleurs[colors[1][i]];
+              var add_blanche = 0;
+              if (colors[1][i] != "J") {
+                add_blanche = couleurs[colors[1][i]];
+              }
+              chance = chance * (couleurs[colors[1][i]] + add_blanche);
             }
-            msg.reply(text + Math.floor(1 / proba_chasses[long[1] - 1] + proba) + "\n" + " Chances d'avoir les couleurs voulues au premier casse : " + chance * 100 + "%");
+            msg.reply(text + "\n" + "**Nombre** : " + Math.floor(1 / proba_chasses[long[1] - 1]) + "\n**Couleurs** : " + Math.floor(proba) + "\n" + " **Ordre** : " + ordre(colors[1]) + "\n" + "**Chances d'avoir les couleurs voulues au premier casse** : " + chance * 100 + "%");
           } else {
-            msg.reply(text + Math.floor(1 / proba_chasses[long[1] - 1] + proba));
+            console.log(ordre(colors[1]));
+            msg.reply(text + "\n" + "**Nombre** : " + Math.floor(1 / proba_chasses[long[1] - 1]) + "\n" + "**Couleurs** : " + Math.floor(proba) + "\n" + " **Ordre** : " + ordre(colors[1]));
           }
         } else if (long[0] == long[1]) {
           if (JSON.stringify(colors[0]) == JSON.stringify(colors[1]))
             msg.reply(text + "0");
           else {
-            msg.reply(text + Math.floor(proba));
+            msg.reply(text + "\n" + "**Couleurs** : " + Math.floor(proba) + "\n" + " **Ordre** : " + ordre(colors[1]));
           }
         }
       }
@@ -692,4 +703,39 @@ function distance(s1, s2) {
   }
   return mat[m][n];
 
+}
+
+function ordre(expr) {
+  console.log(calcul_ordre(expr.length));
+  return Math.floor(1 / calcul_ordre(expr.length));
+}
+
+function combin(k, n) {
+
+  return factorielle(n, factorielle(k, 0) * (n - k));
+}
+
+function factorielle(n, stop) {
+  if (n < 0) {
+    return -1;
+  } else {
+    if (n == 0) {
+      return 1;
+    } else {
+      res = 1;
+      for (var i = n; i > stop; i--) {
+        res = res * i;
+      }
+      return res;
+    }
+  }
+}
+
+
+function calcul_ordre(len) {
+  combinaisons = 1;
+  for (var i = len; i > 0; i--) {
+    combinaisons = combinaisons * combin(1, i);
+  }
+  return combinaisons / combin(1, Math.pow(len, len));
 }
