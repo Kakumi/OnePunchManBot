@@ -488,9 +488,7 @@ client.on('message', msg => {
     var long = [];
     var colors = [];
     const text = "\nNombre de relances moyenne pour les châsses voulues : ";
-    if (args.length < 2) {
-      msg.reply("\n Veuillez fournir les bons paramètres! ");
-    } else if (args[0].length > args[1].length) {
+    if (args.length < 1) {
       msg.reply("\n Veuillez fournir les bons paramètres! ");
     } else {
       args.forEach(arg => {
@@ -499,40 +497,23 @@ client.on('message', msg => {
         long.push(color.length);
       });
       var proba = 1;
-      for (var i = 0; i < colors[1].length; i++) {
+      for (var i = 0; i < colors[0].length; i++) {
         var add_blanche = 0;
-        if (colors[1][i] != "J") {
+        if (colors[0][i] != "J") {
           add_blanche = couleurs["J"];
         }
-        proba = proba * (couleurs[colors[1][i]] + add_blanche);
+        proba = proba * (couleurs[colors[0][i]] + add_blanche);
       }
       proba = 1 / proba;
-      if (isNaN(proba) || proba_chasses[long[1] - 1] == undefined) {
+      if (isNaN(proba) || proba_chasses[long[0] - 1] == undefined) {
         msg.reply("\n Veuillez fournir les bons paramètres! ");
       } else {
-        if (long[0] < long[1]) {
-          if (args[0] == args[1].substring(0, args[0].length)) {
-            nb_color = long[1] - long[0];
-            var chance = 1;
-            for (i = long[1] - 1; i > long[1] - 1 - nb_color; i--) {
-              var add_blanche = 0;
-              if (colors[1][i] != "J") {
-                add_blanche = couleurs[colors[1][i]];
-              }
-              chance = chance * (couleurs[colors[1][i]] + add_blanche);
-            }
-            msg.reply(text + "\n" + "**Nombre** : " + Math.floor(1 / proba_chasses[long[1] - 1]) + "\n**Couleurs** : " + Math.floor(proba) + "\n" + " **Ordre** : " + ordre(colors[1]) + "\n" + "**Chances d'avoir les couleurs voulues au premier casse** : " + chance * 100 + "%");
-          } else {
-            console.log(ordre(colors[1]));
-            msg.reply(text + "\n" + "**Nombre** : " + Math.floor(1 / proba_chasses[long[1] - 1]) + "\n" + "**Couleurs** : " + Math.floor(proba) + "\n" + " **Ordre** : " + ordre(colors[1]));
-          }
-        } else if (long[0] == long[1]) {
-          if (JSON.stringify(colors[0]) == JSON.stringify(colors[1]))
-            msg.reply(text + "0");
-          else {
-            msg.reply(text + "\n" + "**Couleurs** : " + Math.floor(proba) + "\n" + " **Ordre** : " + ordre(colors[1]));
-          }
-        }
+        relance_nb = Math.floor(1 / proba_chasses[long[0] - 1]);
+        relance_color = Math.floor(proba);
+        relance_ordre = ordre(colors[0]);
+        total = relance_color + relance_ordre + relance_nb;
+        casse = Math.ceil(total / 4);
+        msg.reply(text + "\n" + "**Nombre** : " + relance_nb + "\n" + "**Couleurs** : " + relance_color + "\n" + "**Ordre** : " + relance_ordre + "\n**Total** : " + total + "\n**Items à casser** : " + casse);
       }
     }
   }
@@ -706,13 +687,27 @@ function distance(s1, s2) {
 }
 
 function ordre(expr) {
-  console.log(calcul_ordre(expr.length));
-  return Math.floor(1 / calcul_ordre(expr.length));
+  var redon = {
+    "B": 0,
+    "J": 0,
+    "V": 0,
+    "R": 0
+  };
+  expr.forEach(letter => {
+    redon[letter] = redon[letter] + 1;
+
+  });
+  for (key in redon) {
+    if (redon[key] == expr.length) {
+      return 0;
+    }
+  }
+  return Math.floor(1 / calcul_ordre(expr.length, redon, expr));
 }
 
 function combin(k, n) {
 
-  return factorielle(n, factorielle(k, 0) * (n - k));
+  return factorielle(n, (n - k)) / factorielle(k, 0);
 }
 
 function factorielle(n, stop) {
@@ -732,10 +727,21 @@ function factorielle(n, stop) {
 }
 
 
-function calcul_ordre(len) {
+function calcul_ordre(len, redon, expr) {
   combinaisons = 1;
+  total_nb = 0;
+  total_ef = 0;
   for (var i = len; i > 0; i--) {
-    combinaisons = combinaisons * combin(1, i);
+    for (key in redon) {
+      if (redon[key] > 0) {
+        nombre = redon[key];
+        redon[key] = redon[key] - 1;
+        break;
+      }
+    }
+    total_nb += nombre;
+    total_ef += i;
+    combinaisons = combinaisons * combin(nombre, i);
   }
-  return combinaisons / combin(1, Math.pow(len, len));
+  return combinaisons / combin(total_nb, total_ef);
 }
