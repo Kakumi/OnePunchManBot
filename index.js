@@ -1,6 +1,8 @@
 const Discord = require('discord.js');
 const fs = require('fs');
 const cron = require('node-cron');
+const Canvas = require('canvas');
+var request = require('request');
 
 const client = new Discord.Client();
 const prefix = '!';
@@ -20,6 +22,15 @@ const couleurs = {
   "B": 0.308,
   "J": 0.076
 };
+const canvas = Canvas.createCanvas(1920, 1050);
+const ctx = canvas.getContext('2d');
+const text_color = ["#0BAF2C", "#FA4732", "#888888", "#FFFFFF"];
+const { loadImage } = require('canvas');
+
+// Select the font size and type from one of the natively available fonts
+ctx.font = '42px sans-serif';
+// Select the style that will be used to fill the text in
+ctx.fillStyle = text_color[2];
 
 //données WAKFU json
 const items = JSON.parse(fs.readFileSync("Wakfu_json/items.json"));
@@ -149,10 +160,8 @@ client.on('messageReactionRemove', (messageReaction, user) => {
   }
 });
 
-client.on('message', msg => {
-  if (msg.content === prefix + 'test') {
-    console.log(items[150]);
-  } else if (msg.content === 'stop') {
+client.on('message', async msg => {
+if (msg.content === 'stop') {
     console.log(client.user.id);
     client.destroy();
   } else if (msg.content.startsWith(prefix + 'sorties')) {
@@ -353,7 +362,6 @@ client.on('message', msg => {
     const args = msg.content.slice(6);
     const text = args.toLowerCase().split(" ").join("");
     marge = Math.floor(text.length / 6 + 1);
-    console.log(marge);
     var trouve = false;
     var old_title = undefined;
     var res = "";
@@ -418,9 +426,10 @@ client.on('message', msg => {
   } else if (msg.content.startsWith(prefix + 'vs')) {
     const argu = msg.content.slice(4).split(" ").join("").split("+");
     const args = argu[0].split("/");
+    var item_image = {};
     var trouve = false;
     var names = [];
-    var res = "```Markdown\n";
+    var res = "\n";
     var i = -1;
     var j = 0;
     var compare = {};
@@ -436,6 +445,7 @@ client.on('message', msg => {
               names.push(item.title.fr);
               trouve = true;
             }
+            item_image[item.title.fr] = item.definition.item.graphicParameters.gfxId;
             item.definition.equipEffects.forEach(effect => {
               const param = effect.effect.definition.params;
               actions.forEach(action => {
@@ -452,35 +462,63 @@ client.on('message', msg => {
     if (names.length != 2) {
       msg.reply("Les arguments fournis ne sont pas corrects! ");
     } else {
+      const background = await Canvas.loadImage('back.jpg');
+      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+      var hauteur = 100;
       const it = compare[0];
       const it2 = compare[1];
-      var name = names[0].padEnd(42, " ");
+      var name = names[0];
       var part = "";
-      res = res + name + "| \t" + names[1] + "\n";
+
+      var img = await loadImage('https://static.ankama.com/wakfu/portal/game/item/115/' + item_image[names[0]] + '.png');
+      ctx.drawImage(img, 700, hauteur-60);
+      ctx.fillStyle = text_color[3];
+      ctx.textAlign = "start";
+      ctx.fillText(name, 100, hauteur);
+
+      ctx.fillText(names[1], 1025, hauteur);
+
+      var img = await loadImage('https://static.ankama.com/wakfu/portal/game/item/115/' + item_image[names[1]] + '.png');
+      ctx.drawImage(img,1625 , hauteur-60);
+
+      hauteur = hauteur + 60;
       keys = [];
       for (var key in it) {
         keys.push(key);
         if (it2[key] != undefined) {
           diff = [it[key][0] - it2[key][0], it2[key][0] - it[key][0]];
           part = it[key][1] + ' (' + diff[0] + ')';
-          part = part.padEnd(42, " ");
-          res = res + part + '| \t' + it2[key][1] + ' (' + diff[1] + ') \n';
+          if (diff[0] == diff[1]) {
+            ctx.fillStyle = text_color[2];
+            ctx.fillText(part, 100, hauteur);
+            ctx.fillText(it2[key][1] + ' (' + diff[1] + ')', 1025, hauteur);
+
+          } else {
+            ctx.fillStyle = text_color[0];
+            ctx.fillText(part, 100, hauteur);
+            ctx.fillStyle = text_color[1];
+            ctx.fillText(it2[key][1] + ' (' + diff[1] + ')', 1025, hauteur);
+          }
+
+
         } else {
+          ctx.fillStyle = text_color[0]
           part = "+" + it[key][1];
-          part = part.padEnd(42, " ");
-          res = res + part + "| \n";
+          ctx.fillText(part, 100, hauteur);
         }
+        hauteur = hauteur + 60;
       }
+      ctx.fillStyle = text_color[0];
       for (var key in it2) {
         if (!keys.includes(key)) {
           part = "+" + it2[key][1];
-          space = "";
-          space = space.padEnd(42, " ");
-          res = res + space + "| \t" + part + "\n";
+          ctx.fillText(part, 1025, hauteur);
+          hauteur = hauteur + 60;
         }
       }
-      res = res + '```';
-      msg.reply(res);
+      const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'welcome-image.png');
+      msg.channel.send(attachment);
+
     }
   } else if (msg.content.startsWith(prefix + 'chasse')) {
     const args = msg.content.slice(8).split(" ");
