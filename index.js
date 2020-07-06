@@ -9,7 +9,6 @@ const prefix = '!';
 
 //Paramètres
 const levels = ['3', '21', '36', '51', '66', '81', '96', '111', '121', '141', '156', '171', '186', '200', '201'];
-const pingLevels = ['718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206', '718880562756059206'];
 const token = "NzE4MDQ2ODQwMzUxNzUyMjIy.XtomRw.qxEcogAww-21mYU3CL2BWBbGxDw";
 const number = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"];
 const sortieMax = 5;
@@ -82,12 +81,31 @@ cron.schedule('*/15 * * * * *', () => {
   });
 });
 
-client.on('guildCreate', (guild) => {
+client.on('guildCreate', async (guild) => {
   fs.mkdir(guild.name.split(" ").join("_"), function(err) {
     if (err) {
       console.log(err)
     }
   });
+  var role_id = "";
+  var sep = "";
+  for (var i = 0; i < levels.length; i++) {
+    role_id = role_id + sep + await guild.roles.create({
+        data: {
+          name: 'Aide ' + levels[i],
+          color: 'GREEN',
+        }
+      })
+      .then(role => {
+        return role.id;
+      })
+      .catch(console.error);
+    if (i == 0) {
+      sep = " ";
+    }
+  }
+  fs.writeFileSync(guild.name.split(" ").join("_") + "/role_id.txt", role_id, 'utf-8');
+
 
   guild.channels.create("Sorties", {
     reason: 'Channel des sorties'
@@ -247,6 +265,7 @@ client.on('message', async msg => {
     }
 
     indexPingLevel = levels.indexOf(nouvelleSortie.niveau);
+    pingLevels = fs.readFileSync(msg.guild.name.split(" ").join("_") + "/role_id.txt", 'utf-8').split(" ");
     msg.guild.roles.fetch(pingLevels[indexPingLevel]).then(role => {
       client.users.fetch(nouvelleSortie.demandeur).then(sender => {
         const embed = new Discord.MessageEmbed();
@@ -330,7 +349,7 @@ client.on('message', async msg => {
 
     if (send != "") {
       msg.channel.send(send).then(async function(message) {
-        for (i = 0; i < sortiesUtilisateur.length ; i++) {
+        for (i = 0; i < sortiesUtilisateur.length; i++) {
           await message.react(number[i]);
         }
 
@@ -492,12 +511,11 @@ client.on('message', async msg => {
               if (!trouve) {
                 names.push(item.title.fr);
                 trouve = true;
-                if (Object.keys(lvl).length == 1){
+                if (Object.keys(lvl).length == 1) {
                   lvl[1] = " (" + item.definition.item.level + ")";
+                } else {
+                  lvl[item.title.fr] = " (" + item.definition.item.level + ")";
                 }
-                else{
-                lvl[item.title.fr] = " (" + item.definition.item.level + ")";
-              }
               }
               item_image[item.title.fr] = item.definition.item.graphicParameters.gfxId;
               item.definition.equipEffects.forEach(effect => {
@@ -545,10 +563,9 @@ client.on('message', async msg => {
       ctx.fillText(name + lvl[names[0]], 100, hauteur);
 
       ctx.fillStyle = rarity_color[argu[2] - 1];
-      if ( names[0] == names[1] ){
+      if (names[0] == names[1]) {
         level = lvl[1];
-      }
-      else{
+      } else {
         level = lvl[names[1]];
       }
       ctx.fillText(names[1] + level, 1025, hauteur);
@@ -862,14 +879,13 @@ function isEquipment(item) {
   const idontwant = ["PET", "COSTUME"];
   const type_id = item['definition']['item']['baseParameters']['itemTypeId'];
   type = item_type.find(type => type.definition.id == type_id);
-      if (type.definition.equipmentPositions.length == 0 && type.definition.title.fr != "Montures") {
-        return false;
-      } else if (type.definition.equipmentPositions[0] == "ACCESSORY" && type.definition.title.fr != "emblème") {
-        return false;
-      } else if (idontwant.includes(type.definition.equipmentPositions[0])) {
-        return false;
-      }
-      else{
-        return true;
-      }
+  if (type.definition.equipmentPositions.length == 0 && type.definition.title.fr != "Montures") {
+    return false;
+  } else if (type.definition.equipmentPositions[0] == "ACCESSORY" && type.definition.title.fr != "emblème") {
+    return false;
+  } else if (idontwant.includes(type.definition.equipmentPositions[0])) {
+    return false;
+  } else {
+    return true;
+  }
 }
