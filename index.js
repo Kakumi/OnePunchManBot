@@ -25,8 +25,10 @@ const couleurs = {
 const canvas = Canvas.createCanvas(1920, 1050);
 const ctx = canvas.getContext('2d');
 const text_color = ["#0BAF2C", "#FA4732", "#888888"];
-const rarity_color = ["#FFFFFF","#4A20FF","#FF8000","#FFEF20","#8B008B","#00BBFF","#FF00FF"];
-const { loadImage } = require('canvas');
+const rarity_color = ["#FFFFFF", "#4A20FF", "#FF8000", "#FFEF20", "#8B008B", "#00BBFF", "#FF00FF"];
+const {
+  loadImage
+} = require('canvas');
 
 // Select the font size and type from one of the natively available fonts
 ctx.font = '38px sans-serif';
@@ -99,7 +101,16 @@ client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
   sorties = getAllSorties();
   client.guilds.cache.forEach((guild) => {
+
     channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_") + "/id.txt", 'utf-8'));
+    if (channelSortie == undefined) {
+      guild.channels.create("Sorties", {
+        reason: 'Channel des sorties'
+      }).then((channe) => {
+        channelSortie = guild.channels.cache.get(channe.id);
+        fs.writeFileSync(guild.name.split(" ").join("_") + "/id.txt", channe.id, 'utf-8');
+      });
+    }
     for (var i = 0; i < sorties.length; i++) {
       sortie = sorties[i];
       console.log("Tentative mise en cache du message " + sortie.message);
@@ -162,7 +173,7 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 });
 
 client.on('message', async msg => {
-if (msg.content === 'stop') {
+  if (msg.content === 'stop') {
     console.log(client.user.id);
     client.destroy();
   } else if (msg.content.startsWith(prefix + 'sorties')) {
@@ -247,27 +258,58 @@ if (msg.content === 'stop') {
         embed.addField("Demandeur :", sender.username, true);
         embed.addField("Date :", nouvelleSortie.jour + "/" + nouvelleSortie.mois + "/" + nouvelleSortie.annee + " à " + nouvelleSortie.heure + ":" + nouvelleSortie.minutes, false);
         embed.setAuthor(sender.username, sender.displayAvatarURL());
+        var channel = msg.guild.channels.cache.get(fs.readFileSync(msg.guild.name.split(" ").join("_") + "/id.txt", 'utf-8'));
+        if (channel == undefined) {
+          msg.guild.channels.create("Sorties", {
+            reason: 'Channel des sorties'
+          }).then((channe) => {
+            channel = msg.guild.channels.cache.get(channe.id);
+            fs.writeFileSync(msg.guild.name.split(" ").join("_") + "/id.txt", channe.id, 'utf-8');
+            channel.send("<@&" + role + '> Voici la sortie prévue :', embed).then(message => {
+              nouvelleSortie.message = message.id;
+              message.react('✅');
 
-        msg.guild.channels.cache.get(fs.readFileSync(msg.guild.name.split(" ").join("_") + "/id.txt", 'utf-8')).send("<@&" + role + '> Voici la sortie prévue :', embed).then(message => {
-          nouvelleSortie.message = message.id;
-          message.react('✅');
-
-          try {
-            if (!fs.existsSync(msg.guild.name.split(" ").join("_") + "/")) {
-              fs.mkdir(msg.guild.name.split(" ").join("_"), function(err) {
-                if (err) {
-                  console.log(err)
+              try {
+                if (!fs.existsSync(msg.guild.name.split(" ").join("_") + "/")) {
+                  fs.mkdir(msg.guild.name.split(" ").join("_"), function(err) {
+                    if (err) {
+                      console.log(err)
+                    }
+                  });
                 }
-              });
-            }
-            sorties = getSorties(msg.guild.name.split(" ").join("_") + "/sortie.json");
-          } catch (err) {
-            console.error(err)
-          }
+                sorties = getSorties(msg.guild.name.split(" ").join("_") + "/sortie.json");
+              } catch (err) {
+                console.error(err)
+              }
 
-          sorties.push(nouvelleSortie);
-          setSorties(msg.guild.name.split(" ").join("_") + "/sortie.json", sorties);
-        });
+              sorties.push(nouvelleSortie);
+              setSorties(msg.guild.name.split(" ").join("_") + "/sortie.json", sorties);
+            });
+          });
+        } else {
+
+
+          channel.send("<@&" + role + '> Voici la sortie prévue :', embed).then(message => {
+            nouvelleSortie.message = message.id;
+            message.react('✅');
+
+            try {
+              if (!fs.existsSync(msg.guild.name.split(" ").join("_") + "/")) {
+                fs.mkdir(msg.guild.name.split(" ").join("_"), function(err) {
+                  if (err) {
+                    console.log(err)
+                  }
+                });
+              }
+              sorties = getSorties(msg.guild.name.split(" ").join("_") + "/sortie.json");
+            } catch (err) {
+              console.error(err)
+            }
+
+            sorties.push(nouvelleSortie);
+            setSorties(msg.guild.name.split(" ").join("_") + "/sortie.json", sorties);
+          });
+        }
       });
     });
   } else if (msg.content.startsWith(prefix + 'remove')) {
@@ -288,8 +330,8 @@ if (msg.content === 'stop') {
 
     if (send != "") {
       msg.channel.send(send).then(async function(message) {
-        for (i = 0; i < index; i++) {
-          message.react(number[i]);
+        for (i = 0; i < sortiesUtilisateur.length ; i++) {
+          await message.react(number[i]);
         }
 
         const filter = (reaction, user) => {
@@ -370,26 +412,26 @@ if (msg.content === 'stop') {
       try {
         if (distance(item.title.fr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join(""), text) <= marge) {
           console.log(isEquipment(item));
-          if( isEquipment(item)){
-          if (item.title.fr != old_title && old_title != undefined) {
-            trouve = false;
-          }
-          if (!trouve) {
-            old_title = item.title.fr;
-            res = res + item.title.fr + "\n";
-            trouve = true;
-          }
-          res = res + rarity[item.definition.item.baseParameters.rarity - 1] + " lvl : " + item.definition.item.level + "\n";
-          item.definition.equipEffects.forEach(effect => {
-            actions.forEach(action => {
-              if (action.definition.id == effect.effect.definition.actionId) {
-                res = res + replaceAll(action.description.fr, ["[#1]", "[#2]", "[#3]", "[#4]"], effect.effect.definition.params, item.definition.item.level) + "\n";
-              }
+          if (isEquipment(item)) {
+            if (item.title.fr != old_title && old_title != undefined) {
+              trouve = false;
+            }
+            if (!trouve) {
+              old_title = item.title.fr;
+              res = res + item.title.fr + "\n";
+              trouve = true;
+            }
+            res = res + rarity[item.definition.item.baseParameters.rarity - 1] + " lvl : " + item.definition.item.level + "\n";
+            item.definition.equipEffects.forEach(effect => {
+              actions.forEach(action => {
+                if (action.definition.id == effect.effect.definition.actionId) {
+                  res = res + replaceAll(action.description.fr, ["[#1]", "[#2]", "[#3]", "[#4]"], effect.effect.definition.params, item.definition.item.level) + "\n";
+                }
+              });
             });
-          });
 
-          res = res + "\n";
-        }
+            res = res + "\n";
+          }
         }
       } catch {
 
@@ -446,23 +488,27 @@ if (msg.content === 'stop') {
       items.forEach(item => {
         try {
           if (distance(item.title.fr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join(""), arg.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join("")) <= 1 && item.definition.item.baseParameters.rarity == argu[j]) {
-            if (isEquipment(item)){
-            if (!trouve) {
-              names.push(item.title.fr);
-              trouve = true;
-               lvl[item.title.fr] = " (" + item.definition.item.level + ")";
-                   console.log(item['definition']['item']['baseParameters']['itemTypeId']);
-            }
-            item_image[item.title.fr] = item.definition.item.graphicParameters.gfxId;
-            item.definition.equipEffects.forEach(effect => {
-              const param = effect.effect.definition.params;
-              actions.forEach(action => {
-                if (action.definition.id == effect.effect.definition.actionId) {
-                  compare[i][action.definition.id] = [param[1] * item.definition.item.level + param[0], replaceAll(action.description.fr, ["[#1]", "[#2]", "[#3]", "[#4]"], param, item.definition.item.level)];
+            if (isEquipment(item)) {
+              if (!trouve) {
+                names.push(item.title.fr);
+                trouve = true;
+                if (Object.keys(lvl).length == 1){
+                  lvl[1] = " (" + item.definition.item.level + ")";
                 }
+                else{
+                lvl[item.title.fr] = " (" + item.definition.item.level + ")";
+              }
+              }
+              item_image[item.title.fr] = item.definition.item.graphicParameters.gfxId;
+              item.definition.equipEffects.forEach(effect => {
+                const param = effect.effect.definition.params;
+                actions.forEach(action => {
+                  if (action.definition.id == effect.effect.definition.actionId) {
+                    compare[i][action.definition.id] = [param[1] * item.definition.item.level + param[0], replaceAll(action.description.fr, ["[#1]", "[#2]", "[#3]", "[#4]"], param, item.definition.item.level)];
+                  }
+                });
               });
-            });
-          }
+            }
           }
         } catch {}
 
@@ -481,28 +527,34 @@ if (msg.content === 'stop') {
       const it1_keylist = Object.keys(it);
       const it2_keylist = Object.keys(it2);
       var max_lines = it1_keylist.length + it2_keylist.length;
-      it1_keylist.forEach( key => {
-        if (it2_keylist.includes(key)){
-          max_lines --;
+      it1_keylist.forEach(key => {
+        if (it2_keylist.includes(key)) {
+          max_lines--;
         }
       });
-      if ( 100+(60*max_lines)>canvas.height){
-        canvas.height = 300+(60*max_lines);
+      if (100 + (60 * max_lines) > canvas.height) {
+        canvas.height = 300 + (60 * max_lines);
       }
       var name = names[0];
       var part = "";
 
       var img = await loadImage('https://static.ankama.com/wakfu/portal/game/item/115/' + item_image[names[0]] + '.png');
-      ctx.drawImage(img, 700, hauteur-60);
-      ctx.fillStyle = rarity_color[argu[1]-1];
+      ctx.drawImage(img, 700, hauteur - 60);
+      ctx.fillStyle = rarity_color[argu[1] - 1];
       ctx.textAlign = "start";
       ctx.fillText(name + lvl[names[0]], 100, hauteur);
 
-      ctx.fillStyle = rarity_color[argu[2]-1];
-      ctx.fillText(names[1] + lvl[names[1]], 1025, hauteur);
+      ctx.fillStyle = rarity_color[argu[2] - 1];
+      if ( names[0] == names[1] ){
+        level = lvl[1];
+      }
+      else{
+        level = lvl[names[1]];
+      }
+      ctx.fillText(names[1] + level, 1025, hauteur);
 
       var img = await loadImage('https://static.ankama.com/wakfu/portal/game/item/115/' + item_image[names[1]] + '.png');
-      ctx.drawImage(img,1625 , hauteur-60);
+      ctx.drawImage(img, 1625, hauteur - 60);
 
       hauteur = hauteur + 60;
       keys = [];
@@ -513,21 +565,17 @@ if (msg.content === 'stop') {
           diff = [it[key][0] - it2[key][0], it2[key][0] - it[key][0]];
           part = it[key][1] + ' (' + diff[0] + ')';
           if (diff[0] == diff[1]) {
-            diff_color = [2,2];
-          } else if( diff[0] > diff[1]){
-            diff_color = [0,1];
+            diff_color = [2, 2];
+          } else if (diff[0] > diff[1]) {
+            diff_color = [0, 1];
+          } else {
+            diff_color = [1, 0];
           }
-          else{
-            diff_color = [1,0];
-          }
-            ctx.fillStyle = text_color[diff_color[0]];
-            ctx.fillText(part, 100, hauteur);
-            ctx.fillStyle = text_color[diff_color[1]];
-            ctx.fillText(it2[key][1] + ' (' + diff[1] + ')', 1025, hauteur);
-          }
-
-
-         else {
+          ctx.fillStyle = text_color[diff_color[0]];
+          ctx.fillText(part, 100, hauteur);
+          ctx.fillStyle = text_color[diff_color[1]];
+          ctx.fillText(it2[key][1] + ' (' + diff[1] + ')', 1025, hauteur);
+        } else {
           ctx.fillStyle = text_color[0]
           part = "+" + it[key][1];
           ctx.fillText(part, 100, hauteur);
@@ -810,25 +858,18 @@ function calcul_ordre(len, redon, expr) {
   return combinaisons / combin(total_nb, total_ef);
 }
 
-function isEquipment(item){
-  const idontwant = ["PET","COSTUME"];
+function isEquipment(item) {
+  const idontwant = ["PET", "COSTUME"];
   const type_id = item['definition']['item']['baseParameters']['itemTypeId'];
-  var trouve = false;
-  item_type.forEach( type => {
-    if ( type.definition.id == type_id ){
-      var trouve = true;
-      console.log(type.definition.equipmentPositions[0]);
-      if ( type.definition.equipmentPositions.length == 0 && type.definition.title.fr!="Montures"){
+  type = item_type.find(type => type.definition.id == type_id);
+      if (type.definition.equipmentPositions.length == 0 && type.definition.title.fr != "Montures") {
+        return false;
+      } else if (type.definition.equipmentPositions[0] == "ACCESSORY" && type.definition.title.fr != "emblème") {
+        return false;
+      } else if (idontwant.includes(type.definition.equipmentPositions[0])) {
         return false;
       }
-      else if ( type.definition.equipmentPositions[0] == "ACCESSORY" && type.definition.title.fr!="emblème"){
-        return false;
+      else{
+        return true;
       }
-      else if ( idontwant.includes(type.definition.equipmentPositions[0]) ){
-        return false;
-      }
-    }
-  });
-    return true;
-
 }
