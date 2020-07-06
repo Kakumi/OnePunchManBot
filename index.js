@@ -24,17 +24,18 @@ const couleurs = {
 };
 const canvas = Canvas.createCanvas(1920, 1050);
 const ctx = canvas.getContext('2d');
-const text_color = ["#0BAF2C", "#FA4732", "#888888", "#FFFFFF"];
+const text_color = ["#0BAF2C", "#FA4732", "#888888"];
+const rarity_color = ["#FFFFFF","#4A20FF","#FF8000","#FFEF20","#8B008B","#00BBFF","#FF00FF"];
 const { loadImage } = require('canvas');
 
 // Select the font size and type from one of the natively available fonts
-ctx.font = '42px sans-serif';
+ctx.font = '38px sans-serif';
 // Select the style that will be used to fill the text in
-ctx.fillStyle = text_color[2];
 
 //données WAKFU json
 const items = JSON.parse(fs.readFileSync("Wakfu_json/items.json"));
 const actions = JSON.parse(fs.readFileSync("Wakfu_json/actions.json"));
+const item_type = JSON.parse(fs.readFileSync("Wakfu_json/equipmentItemTypes.json"));
 
 cron.schedule('*/15 * * * * *', () => {
   client.guilds.cache.each(guild => {
@@ -368,6 +369,8 @@ if (msg.content === 'stop') {
     items.forEach(item => {
       try {
         if (distance(item.title.fr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join(""), text) <= marge) {
+          console.log(isEquipment(item));
+          if( isEquipment(item)){
           if (item.title.fr != old_title && old_title != undefined) {
             trouve = false;
           }
@@ -387,8 +390,9 @@ if (msg.content === 'stop') {
 
           res = res + "\n";
         }
+        }
       } catch {
-        console.log(item);
+
       }
     });
     if (trouve) {
@@ -429,6 +433,7 @@ if (msg.content === 'stop') {
     var item_image = {};
     var trouve = false;
     var names = [];
+    var lvl = {};
     var res = "\n";
     var i = -1;
     var j = 0;
@@ -440,10 +445,13 @@ if (msg.content === 'stop') {
       compare[i] = {};
       items.forEach(item => {
         try {
-          if (distance(item.title.fr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join(""), arg) <= 1 && item.definition.item.baseParameters.rarity == argu[j]) {
+          if (distance(item.title.fr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join(""), arg.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(" ").join("")) <= 1 && item.definition.item.baseParameters.rarity == argu[j]) {
+            if (isEquipment(item)){
             if (!trouve) {
               names.push(item.title.fr);
               trouve = true;
+               lvl[item.title.fr] = " (" + item.definition.item.level + ")";
+                   console.log(item['definition']['item']['baseParameters']['itemTypeId']);
             }
             item_image[item.title.fr] = item.definition.item.graphicParameters.gfxId;
             item.definition.equipEffects.forEach(effect => {
@@ -454,6 +462,7 @@ if (msg.content === 'stop') {
                 }
               });
             });
+          }
           }
         } catch {}
 
@@ -466,42 +475,59 @@ if (msg.content === 'stop') {
       ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
       var hauteur = 100;
       const it = compare[0];
+
       const it2 = compare[1];
+
+      const it1_keylist = Object.keys(it);
+      const it2_keylist = Object.keys(it2);
+      var max_lines = it1_keylist.length + it2_keylist.length;
+      it1_keylist.forEach( key => {
+        if (it2_keylist.includes(key)){
+          max_lines --;
+        }
+      });
+      if ( 100+(60*max_lines)>canvas.height){
+        canvas.height = 300+(60*max_lines);
+      }
       var name = names[0];
       var part = "";
 
       var img = await loadImage('https://static.ankama.com/wakfu/portal/game/item/115/' + item_image[names[0]] + '.png');
       ctx.drawImage(img, 700, hauteur-60);
-      ctx.fillStyle = text_color[3];
+      ctx.fillStyle = rarity_color[argu[1]-1];
       ctx.textAlign = "start";
-      ctx.fillText(name, 100, hauteur);
+      ctx.fillText(name + lvl[names[0]], 100, hauteur);
 
-      ctx.fillText(names[1], 1025, hauteur);
+      ctx.fillStyle = rarity_color[argu[2]-1];
+      ctx.fillText(names[1] + lvl[names[1]], 1025, hauteur);
 
       var img = await loadImage('https://static.ankama.com/wakfu/portal/game/item/115/' + item_image[names[1]] + '.png');
       ctx.drawImage(img,1625 , hauteur-60);
 
       hauteur = hauteur + 60;
       keys = [];
+      var diff_color = [];
       for (var key in it) {
         keys.push(key);
         if (it2[key] != undefined) {
           diff = [it[key][0] - it2[key][0], it2[key][0] - it[key][0]];
           part = it[key][1] + ' (' + diff[0] + ')';
           if (diff[0] == diff[1]) {
-            ctx.fillStyle = text_color[2];
+            diff_color = [2,2];
+          } else if( diff[0] > diff[1]){
+            diff_color = [0,1];
+          }
+          else{
+            diff_color = [1,0];
+          }
+            ctx.fillStyle = text_color[diff_color[0]];
             ctx.fillText(part, 100, hauteur);
-            ctx.fillText(it2[key][1] + ' (' + diff[1] + ')', 1025, hauteur);
-
-          } else {
-            ctx.fillStyle = text_color[0];
-            ctx.fillText(part, 100, hauteur);
-            ctx.fillStyle = text_color[1];
+            ctx.fillStyle = text_color[diff_color[1]];
             ctx.fillText(it2[key][1] + ' (' + diff[1] + ')', 1025, hauteur);
           }
 
 
-        } else {
+         else {
           ctx.fillStyle = text_color[0]
           part = "+" + it[key][1];
           ctx.fillText(part, 100, hauteur);
@@ -782,4 +808,27 @@ function calcul_ordre(len, redon, expr) {
     combinaisons = combinaisons * combin(nombre, i);
   }
   return combinaisons / combin(total_nb, total_ef);
+}
+
+function isEquipment(item){
+  const idontwant = ["PET","COSTUME"];
+  const type_id = item['definition']['item']['baseParameters']['itemTypeId'];
+  var trouve = false;
+  item_type.forEach( type => {
+    if ( type.definition.id == type_id ){
+      var trouve = true;
+      console.log(type.definition.equipmentPositions[0]);
+      if ( type.definition.equipmentPositions.length == 0 && type.definition.title.fr!="Montures"){
+        return false;
+      }
+      else if ( type.definition.equipmentPositions[0] == "ACCESSORY" && type.definition.title.fr!="emblème"){
+        return false;
+      }
+      else if ( idontwant.includes(type.definition.equipmentPositions[0]) ){
+        return false;
+      }
+    }
+  });
+    return true;
+
 }
