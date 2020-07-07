@@ -555,7 +555,7 @@ client.on('message', async msg => {
       }
       var name = names[0];
       var part = "";
-
+      console.log(lvl);
       var img = await loadImage('https://static.ankama.com/wakfu/portal/game/item/115/' + item_image[names[0]] + '.png');
       ctx.drawImage(img, 700, hauteur - 60);
       ctx.fillStyle = rarity_color[argu[1] - 1];
@@ -563,11 +563,7 @@ client.on('message', async msg => {
       ctx.fillText(name + lvl[names[0]], 100, hauteur);
 
       ctx.fillStyle = rarity_color[argu[2] - 1];
-      if (names[0] == names[1]) {
-        level = lvl[1];
-      } else {
-        level = lvl[names[1]];
-      }
+      level = lvl[1];
       ctx.fillText(names[1] + level, 1025, hauteur);
 
       var img = await loadImage('https://static.ankama.com/wakfu/portal/game/item/115/' + item_image[names[1]] + '.png');
@@ -876,12 +872,12 @@ function calcul_ordre(len, redon, expr) {
 }
 
 function isEquipment(item) {
-  const idontwant = ["PET", "COSTUME"];
+  const idontwant = ["COSTUME"];
   const type_id = item['definition']['item']['baseParameters']['itemTypeId'];
   type = item_type.find(type => type.definition.id == type_id);
-  if (type.definition.equipmentPositions.length == 0 && type.definition.title.fr != "Montures") {
+  if (type.definition.equipmentPositions.length == 0 && type.title.fr != "Montures") {
     return false;
-  } else if (type.definition.equipmentPositions[0] == "ACCESSORY" && type.definition.title.fr != "emblème") {
+  } else if (type.definition.equipmentPositions[0] == "ACCESSORY" && type.title.fr != "Emblème") {
     return false;
   } else if (idontwant.includes(type.definition.equipmentPositions[0])) {
     return false;
