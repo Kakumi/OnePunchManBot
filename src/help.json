@@ -1,0 +1,12 @@
+{
+  "sortie": "```css\n !sortie \n Arguments : [lvl requis] [date : jj/mm/aaaa] [heure] [nom de la sortie] \n But : [Création d'une sortie] ```",
+  "sorties": "```css\n!sorties : [affiche les sorties auxquelles vous participez]```",
+  "participants": "```css\n!participants \n **Arguments** : [id de la sortie ( dispo dans le message de la sortie )] \n But : [Affiche les Participants de la Sortie avec l'id correspondant]```",
+  "remove": "```css\n!remove \n Arguments : [id de la sortie ( dispo dans le message de la sortie )] \n But : [Détruit la Sortie avec l'id correspondant]```",
+  "Unprediktable": "```css\n'Nous craignons ne pouvoir vous en dire d'avantage...'```",
+  "bonus": "```css\n!bonus \n Arguments : [nom de l'item ] \n But : [Donne les stats de l'item en question] ```",
+  "help": "```css\n!help \n Arguments : [Facultatif : nom de la commande] \n But : [Donne les infos d'utilisation de la commande ou les commandes disponibles si aucun arguments] ```",
+  "vs": "```css\n!vs \n Arguments : [nom de l'item ( sans fautes )] / [nom de l'item] +1+2 ( exemple numéro = rareté, tapez !help rarete pour plus d'info) \n But : [Compare deux items] ```",
+  "rarete": "```css\nrarete \n1:commun\n2:rare\n3:mythique\n4:legendaire\n5:relique\n6:souvenir\n7:epique ```",
+  "chasse": "```css\n!chasse \n Arguments : [ chasses acuelles ] [ chasses voulue ] exemple : R/V R/V/B \n But : [ Donne des stats sur la réussite de la transformation ] ```"
+}
