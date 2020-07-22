@@ -6,7 +6,6 @@ const data = JSON.parse(rawDataSorties);
 
 
 function help(args) {
-  console.log(data);
   if (data[args] != undefined) {
     var reply = data[args];
   } else if (args == "") {
