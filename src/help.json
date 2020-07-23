@@ -8,5 +8,6 @@
   "help": "```css\n!help \n Arguments : [Facultatif : nom de la commande] \n But : [Donne les infos d'utilisation de la commande ou les commandes disponibles si aucun arguments] ```",
   "vs": "```css\n!vs \n Arguments : [nom de l'item ( sans fautes )] / [nom de l'item] +1+2 ( exemple numéro = rareté, tapez !help rarete pour plus d'info) \n But : [Compare deux items] ```",
   "rarete": "```css\nrarete \n1:commun\n2:rare\n3:mythique\n4:legendaire\n5:relique\n6:souvenir\n7:epique ```",
-  "chasse": "```css\n!chasse \n Arguments : [ chasses acuelles ] [ chasses voulue ] exemple : R/V R/V/B \n But : [ Donne des stats sur la réussite de la transformation ] ```"
+  "chasse": "```css\n!chasse \n Arguments : [ chasses acuelles ] [ chasses voulue ] exemple : R/V R/V/B \n But : [ Donne des stats sur la réussite de la transformation ] ```",
+  "debug": "```css\n!debug \n Commande pour Administrateur à utiliser si bug au niveau des sorties \n But : [ Remise à 0 des données / recréation du channel Sortie et des rôles ] ```"
 }

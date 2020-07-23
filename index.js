@@ -60,17 +60,24 @@ cron.schedule('*/15 * * * * *', () => {
 });
 
 client.on('guildCreate', async (guild) => {
- await sortie_mod.store_data(guild);
+ await sortie_mod.store_data(guild,true);
 
 });
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
   sorties = sortie_mod.getAllSorties(client);
-  client.guilds.cache.forEach((guild) => {
+  client.guilds.cache.forEach(async (guild) => {
+    if (!fs.existsSync(guild.name.split(" ").join("_"))) {
+      fs.mkdirSync(guild.name.split(" ").join("_"));
 
-    channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_") + "/id.txt", 'utf-8'));
-    if (channelSortie == undefined) {
+}
+if (!fs.existsSync(guild.name.split(" ").join("_")+"/role_id.txt")){
+  await sortie_mod.store_data(guild,false);
+}
+    try{
+    channelSortie = guild.channels.cache.get(fs.readFileSync(guild.name.split(" ").join("_") + "/id.txt", 'utf-8'));}
+    catch {
       guild.channels.create("Sorties", {
         reason: 'Channel des sorties'
       }).then((channe) => {
@@ -143,6 +150,28 @@ client.on('message', async msg => {
     const args = msg.content.slice(8).split(" ");
     chasse.calcul(args,msg);
 }
+    else if (msg.content.startsWith(prefix + 'debug') && msg.member.hasPermission('ADMINISTRATOR')) {
+      guild = msg.guild;
+      try{
+      channel = msg.guild.channels.cache.find(channel => channel.id == fs.readFileSync(guild.name.split(" ").join("_")+"/id.txt"));
+      channel.delete();}
+      catch{
+        console.log(" already delete");
+      }
+      roles = fs.readFileSync(guild.name.split(" ").join("_")+"/role_id.txt").toString().split(" ");
+      for ( var i=0; i<roles.length; i++ ){
+        try{
+        r = msg.guild.roles.cache.find( role => role.id == roles[i]);
+        r.delete();}
+        catch{
+          console.log(" already delete");
+        }
+      }
+      fs.unlinkSync(guild.name.split(" ").join("_")+"/id.txt");
+      fs.unlinkSync(guild.name.split(" ").join("_")+"/role_id.txt");
+      fs.unlinkSync(guild.name.split(" ").join("_")+"/sortie.json");
+      sortie_mod.store_data(msg.guild,true);
+    }
 });
 
 client.login(token);

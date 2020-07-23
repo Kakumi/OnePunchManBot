@@ -27,7 +27,7 @@ function sorties(msg) {
   }
   msg.reply(message);
 }
-async function store_data(guild) {
+async function store_data(guild,bool) {
   fs.mkdir(guild.name.split(" ").join("_"), function(err) {
     if (err) {
       console.log(err)
@@ -52,12 +52,12 @@ async function store_data(guild) {
   }
   fs.writeFileSync(guild.name.split(" ").join("_") + "/role_id.txt", role_id, 'utf-8');
 
-
+  if(bool){
   guild.channels.create("Sorties", {
     reason: 'Channel des sorties'
   }).then((channel) => {
     fs.writeFileSync(guild.name.split(" ").join("_") + "/id.txt", channel.id, 'utf-8');
-  });
+  });}
 }
 
 function reaction_remove(message, messageReaction, user) {

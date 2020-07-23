@@ -61,7 +61,7 @@ async function vs(args, argu) {
   if (names.length != 2) {
     return "Les arguments fournis ne sont pas corrects! ";
   } else {
-    const background = await Canvas.loadImage('back.jpg');
+    const background = await Canvas.loadImage('img/back.jpg');
     ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
     var hauteur = 100;
     const it = compare[0];
