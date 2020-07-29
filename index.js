@@ -13,7 +13,7 @@ const prefix = '!';
 
 //Paramètres
 
-const token = "NzE4MDQ2ODQwMzUxNzUyMjIy.XtomRw.qxEcogAww-21mYU3CL2BWBbGxDw";
+const token = "NzE4MDQ2ODQwMzUxNzUyMjIy.XtjLOw.YZmMR1LEucPXVvNNJjvTiw6Dr9w";
 
 
 cron.schedule('*/15 * * * * *', () => {
@@ -142,9 +142,12 @@ client.on('message', async msg => {
     const argu = msg.content.slice(4).split(" ").join("").split("+");
     const args = argu[0].split("/");
     canvas = await stuff.vs(args, argu);
-    console.log(canvas);
+    if ( typeof canvas == "string" ){
+      msg.reply(canvas);
+    }
+    else{
     const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'welcome-image.png');
-    msg.channel.send(attachment);
+    msg.channel.send(attachment);}
 
   } else if (msg.content.startsWith(prefix + 'chasse')) {
     const args = msg.content.slice(8).split(" ");
