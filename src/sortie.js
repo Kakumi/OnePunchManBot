@@ -4,7 +4,8 @@ const id_numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const levels = ['3', '21', '36', '51', '66', '81', '96', '111', '121', '141', '156', '171', '186', '200', '201'];
 const fs = require('fs');
 const Discord = require('discord.js');
-
+var redis = require('redis');
+var redis_client = redis.createClient(process.env.REDISCLOUD_URL, {no_ready_check: true});
 function sorties(msg) {
   message = "Voici tes prochaines sortie : \n";
   sorties = getSorties(msg.guild.name.split(" ").join("_") + "/sortie.json");
@@ -314,15 +315,14 @@ function participants(msg, args, client) {
   }
 }
 
-function getSorties(path) {
-  if (fs.existsSync(path)) {
-    let rawDataSorties = fs.readFileSync(path);
-    sorties = JSON.parse(rawDataSorties);
-  } else {
-    sorties = [];
-  }
-
-  return sorties;
+function getSorties(name) {
+  redis_client.get(name, function (error, result) {
+      if (error) {
+          console.log(error);
+          throw error;
+      }
+      console.log('GET result ->' + result);
+  });
 }
 
 function getAllSorties(client) {
@@ -335,7 +335,7 @@ function getAllSorties(client) {
 
 
 function setSorties(path, sorties) {
-  fs.writeFileSync(path, JSON.stringify(sorties), 'utf-8');
+  redis_client.hmset(name+"sortie",sorties);
 }
 
 function getSortiesUtilisateur(userId, guild) {
